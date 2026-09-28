@@ -56,7 +56,6 @@
     input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; }
     textarea { height: 130px; resize: vertical; }
     .product-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr 1.2fr 35px 35px; gap: 8px; margin-bottom: 8px; align-items: center; }
-    .alias-row { display: grid; grid-template-columns: 2fr 2fr 35px; gap: 8px; margin-bottom: 8px; align-items: center; }
     .btn { background-color: var(--primary-color); color: white; border: none; padding: 9px 16px; font-size: 0.95rem; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
     .btn:hover { background-color: var(--primary-hover); }
     .btn-secondary { background-color: #78909c; }
@@ -76,7 +75,6 @@
     .badge-success { background: #c8e6c9; color: #2e7d32; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
     .badge-fail { background: #ffcdd2; color: #c62828; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
     .import-box { background-color: #f3e5f5; border: 2px dashed #ab47bc; padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-size: 0.9rem; }
-    .tip-box { background-color: #e1f5fe; border-left: 4px solid #0288d1; padding: 8px 12px; font-size: 0.85rem; margin-bottom: 10px; border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -429,7 +427,7 @@
     }
   }
 
-  // 高階逐行精準解析 (徹底確保 71 人全數歸位)
+  // 100% 精準名字與品項匹配 (支援表情符號/星號/數字名字)
   function processOrders() {
     saveCurrentGroupData();
     const g = groupsData[currentGroupId];
@@ -454,10 +452,8 @@
     for (let i = 0; i < lines.length; i++) {
       let line = lines[i];
 
-      // 過濾時間戳記
       if (timePattern.test(line)) continue;
 
-      // 如果包含自吃一單
       if (line.includes('可自吃')) {
         if (currentName && buyerMap[currentName]) {
           buyerMap[currentName].notes = (buyerMap[currentName].notes ? buyerMap[currentName].notes + '；' : '') + line;
@@ -466,7 +462,6 @@
         continue;
       }
 
-      // 如果包含取消
       if (line.includes('取消')) {
         if (currentName && buyerMap[currentName]) {
           products.forEach(p => {
@@ -479,7 +474,6 @@
         continue;
       }
 
-      // 檢查是否為商品喊單
       let matchedLine = false;
 
       products.forEach(p => {
@@ -494,7 +488,6 @@
           const singleLimit = p.limit !== '' ? (parseInt(p.limit, 10) || 0) : globalLimit;
           if (singleLimit > 0 && qty > singleLimit) qty = singleLimit;
 
-          // 抓取尺寸備註
           const sizeMatch = line.match(/(?:尺寸|號)?\s*(S|M|L|XL|2XL|3XL)/i);
           let sizeNote = sizeMatch ? `尺寸:${sizeMatch[1].toUpperCase()}` : '';
 
@@ -514,9 +507,11 @@
         }
       });
 
-      // 判斷是否為「買家名字」（非商品、非時間戳記、長度短於15字）
+      // 修正：允許含有 *、+、括號、數字的正常買家名字（如 Y哲哲( *·~·* )）
       let isJunk = junkWords.some(j => line === j || line.startsWith(j));
-      if (!matchedLine && !timePattern.test(line) && !isJunk && line.length < 20 && !line.includes('+') && !line.includes('*')) {
+      let isProductSyntax = products.some(p => line.includes(p.name));
+
+      if (!matchedLine && !isProductSyntax && !timePattern.test(line) && !isJunk && line.length < 30) {
         currentName = line;
       }
     }
