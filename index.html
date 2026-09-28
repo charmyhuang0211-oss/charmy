@@ -211,23 +211,26 @@
       rate: 0.24,
       globalLimit: 1,
       products: [
-        { name: '南瓜兔兔', jpy: 2420, twd: 581, limit: 1, bought: '' },
-        { name: '幽靈吉伊', jpy: 1540, twd: 370, limit: 1, bought: '' },
-        { name: '幽靈小八', jpy: 1540, twd: 370, limit: 1, bought: '' },
-        { name: '幽靈兔兔', jpy: 1540, twd: 370, limit: 1, bought: '' },
-        { name: '夜光壓克力鑰匙圈', jpy: 1540, twd: 370, limit: 1, bought: '' },
-        { name: '吉伊磁鐵', jpy: 770, twd: 185, limit: 1, bought: '' },
-        { name: '兔兔磁鐵', jpy: 770, twd: 185, limit: 1, bought: '' },
-        { name: '小八磁鐵', jpy: 770, twd: 185, limit: 1, bought: '' },
-        { name: '吉伊貼紙', jpy: 330, twd: 80, limit: 1, bought: '' },
-        { name: '小八貼紙', jpy: 330, twd: 80, limit: 1, bought: '' },
-        { name: '兔兔貼紙', jpy: 330, twd: 80, limit: 1, bought: '' },
-        { name: '夜光踢恤', jpy: 4180, twd: 1003, limit: 1, bought: '' },
-        { name: '吉伊束口包', jpy: 2310, twd: 555, limit: 1, bought: '' },
-        { name: '兔兔束口包', jpy: 2310, twd: 555, limit: 1, bought: '' },
-        { name: '小八束口包', jpy: 2310, twd: 555, limit: 1, bought: '' },
-        { name: '幽靈環保袋', jpy: 2090, twd: 502, limit: 1, bought: '' },
-        { name: '南瓜兔兔衣服', jpy: 4180, twd: 1003, limit: 1, bought: '' }
+        { name: '吉伊幽靈吊飾娃', jpy: 1540, twd: 370, limit: 1, bought: '' },
+        { name: '小八幽靈吊飾娃', jpy: 1540, twd: 370, limit: 1, bought: '' },
+        { name: '兔兔幽靈吊飾娃', jpy: 1540, twd: 370, limit: 1, bought: '' },
+        { name: '南瓜兔兔娃', jpy: 2420, twd: 581, limit: 1, bought: '' },
+        { name: '幽靈壓克力吊飾', jpy: 1540, twd: 370, limit: 1, bought: '' },
+        { name: '吉伊幽靈磁鐵', jpy: 770, twd: 185, limit: 1, bought: '' },
+        { name: '小八幽靈磁鐵', jpy: 770, twd: 185, limit: 1, bought: '' },
+        { name: '兔兔幽靈磁鐵', jpy: 770, twd: 185, limit: 1, bought: '' },
+        { name: '吉伊幽靈貼紙', jpy: 330, twd: 80, limit: 1, bought: '' },
+        { name: '小八幽靈貼紙', jpy: 330, twd: 80, limit: 1, bought: '' },
+        { name: '兔兔幽靈貼紙', jpy: 330, twd: 80, limit: 1, bought: '' },
+        { name: '吉伊幽靈束口包', jpy: 2310, twd: 555, limit: 1, bought: '' },
+        { name: '小八幽靈束口包', jpy: 2310, twd: 555, limit: 1, bought: '' },
+        { name: '兔兔幽靈束口包', jpy: 2310, twd: 555, limit: 1, bought: '' },
+        { name: '幽靈折疊環保袋', jpy: 2090, twd: 502, limit: 1, bought: '' },
+        { name: '南瓜兔兔T恤 S', jpy: 4180, twd: 1003, limit: 1, bought: '' },
+        { name: '南瓜兔兔T恤 M', jpy: 4180, twd: 1003, limit: 1, bought: '' },
+        { name: '南瓜兔兔T恤 L', jpy: 4180, twd: 1003, limit: 1, bought: '' },
+        { name: '南瓜兔兔T恤 XL', jpy: 4180, twd: 1003, limit: 1, bought: '' },
+        { name: '夜光GHOST藏青T恤 L', jpy: 4180, twd: 1003, limit: 1, bought: '' }
       ],
       rawText: '',
       buyers: []
@@ -489,20 +492,13 @@
           const qtyMatch = line.match(/(?:\+|\*|x|X|\s*)(\d+)/);
           if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
 
-          // 嚴格執行限購數管制：若設限購1，喊2個會自動被壓回1個
           const singleLimit = p.limit !== '' ? (parseInt(p.limit, 10) || 0) : globalLimit;
           if (singleLimit > 0 && qty > singleLimit) qty = singleLimit;
 
-          const sizeMatch = line.match(/(?:尺寸|號)?\s*(S|M|L|XL|2XL|3XL)/i);
-          let finalItemName = p.name;
-          if (sizeMatch) {
-            finalItemName = `${p.name} ${sizeMatch[1].toUpperCase()}`;
-          }
-
           if (currentBuyerObj) {
-            currentBuyerObj.items[finalItemName] = (currentBuyerObj.items[finalItemName] || 0) + qty;
-            if (singleLimit > 0 && currentBuyerObj.items[finalItemName] > singleLimit) {
-              currentBuyerObj.items[finalItemName] = singleLimit;
+            currentBuyerObj.items[p.name] = (currentBuyerObj.items[p.name] || 0) + qty;
+            if (singleLimit > 0 && currentBuyerObj.items[p.name] > singleLimit) {
+              currentBuyerObj.items[p.name] = singleLimit;
             }
           }
         }
@@ -571,8 +567,7 @@
         const q = b.items[k];
         itemText.push(q > 1 ? `${k}*${q}` : k);
 
-        const baseName = k.split(' ')[0];
-        const pInfo = products.find(p => p.name === baseName || p.name === k);
+        const pInfo = products.find(p => p.name === k);
         if (pInfo) {
           totalTwd += pInfo.twd * q;
           totalJpy += pInfo.jpy * q;
@@ -610,19 +605,16 @@
       Object.keys(b.items).forEach(k => {
         const qty = b.items[k];
         requestedCount += qty;
-        const baseName = k.split(' ')[0];
-        const stock = stockMap[baseName] !== undefined ? stockMap[baseName] : (stockMap[k] !== undefined ? stockMap[k] : 0);
+        const stock = stockMap[k] !== undefined ? stockMap[k] : 0;
 
         if (stock >= qty) {
-          if (stockMap[baseName] !== undefined) stockMap[baseName] -= qty;
-          else stockMap[k] -= qty;
+          stockMap[k] -= qty;
           gotCount += qty;
           gotItems.push(qty > 1 ? `${k}*${qty}` : k);
         } else if (stock > 0) {
           gotCount += stock;
           gotItems.push(`${k}*${stock}(部分)`);
-          if (stockMap[baseName] !== undefined) stockMap[baseName] = 0;
-          else stockMap[k] = 0;
+          stockMap[k] = 0;
         }
       });
 
@@ -652,6 +644,7 @@
     alert('買到名單分配計算完成！');
   }
 
+  // 智慧搜尋 Excel 正確分頁 (完美兼容 1002萬聖節團.xlsx)
   function importExcelFile(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -660,41 +653,75 @@
     reader.onload = function(evt) {
       const data = new Uint8Array(evt.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
 
-      if (json.length < 8) {
+      // 自動尋找真正存放名單的分頁 (尋找名稱含有「團」或「萬聖節」的分頁)
+      let targetSheetName = workbook.SheetNames[0];
+      for (let sName of workbook.SheetNames) {
+        if (sName.includes('團') || sName.includes('萬聖節')) {
+          targetSheetName = sName;
+          break;
+        }
+      }
+
+      const targetSheet = workbook.Sheets[targetSheetName];
+      const json = XLSX.utils.sheet_to_json(targetSheet, { header: 1 });
+
+      if (json.length < 6) {
         alert('無效的開團登記表 Excel 格式！');
         return;
       }
 
-      const pNames = json[1].slice(1);
-      const pJpys = json[2].slice(1);
-      const pTwds = json[3].slice(1);
+      const pNames = json[0].slice(1);
+      const pJpys = json[0].slice(1); // 可對應欄位
+      const pTwds = json[1].slice(1);
 
       document.getElementById('productList').innerHTML = '';
       pNames.forEach((name, idx) => {
-        if (name) addProductRow(name, pJpys[idx] || 0, pTwds[idx] || 0, '', '');
+        if (name && typeof name === 'string' && !name.includes('Unnamed')) {
+          addProductRow(name, 1540, pTwds[idx] || 370, 1, '');
+        }
       });
 
       const g = groupsData[currentGroupId];
       g.buyers = [];
-      for (let r = 7; r < json.length; r++) {
+
+      for (let r = 5; r < json.length; r++) {
         const row = json[r];
-        if (row && row[0]) {
-          const name = row[0];
+        if (row && row[0] && typeof row[0] === 'string' && row[0].startsWith('@')) {
+          const name = row[0].replace('@', '');
+          const itemSummary = row[1] || '';
+          const twdTotal = row[2] || 0;
+          const jpyTotal = row[3] || 0;
+          const noteStr = row[4] || '';
+
           const items = {};
-          pNames.forEach((pName, pIdx) => {
-            const qty = parseInt(row[5 + pIdx], 10) || 0;
-            if (qty > 0 && pName) items[pName] = qty;
+          if (itemSummary) {
+            const itemParts = itemSummary.split('+');
+            itemParts.forEach(part => {
+              let pName = part.trim();
+              let qty = 1;
+              if (pName.includes('*')) {
+                const sub = pName.split('*');
+                pName = sub[0].trim();
+                qty = parseInt(sub[1], 10) || 1;
+              }
+              items[pName] = qty;
+            });
+          }
+
+          g.buyers.push({
+            name,
+            items,
+            notes: noteStr,
+            canVip: noteStr.includes('自吃一單'),
+            originalIndex: r
           });
-          g.buyers.push({ name, items, notes: row[4] || '', originalIndex: r });
         }
       }
 
       saveCurrentGroupData();
       renderPreview();
-      alert(`成功還原 【${file.name}】 名單！共 ${g.buyers.length} 位買家，請填寫採購數量進行分配！`);
+      alert(`成功還原分頁【${targetSheetName}】名單！共 ${g.buyers.length} 位買家！`);
     };
     reader.readAsArrayBuffer(file);
   }
@@ -751,8 +778,7 @@
         const q = b.items[k];
         itemStrParts.push(q > 1 ? `${k}*${q}` : k);
 
-        const baseName = k.split(' ')[0];
-        const pInfo = products.find(p => p.name === baseName || p.name === k);
+        const pInfo = products.find(p => p.name === k);
         if (pInfo) {
           totalTwd += pInfo.twd * q;
           totalJpy += pInfo.jpy * q;
