@@ -427,7 +427,6 @@
     }
   }
 
-  // 100% 精準名字與品項匹配 (支援表情符號/星號/數字名字)
   function processOrders() {
     saveCurrentGroupData();
     const g = groupsData[currentGroupId];
@@ -447,7 +446,7 @@
     let currentName = '';
 
     const timePattern = /^(\d+月\d+日|\d+小時前|昨天|前天|今天|\d+:\d+|\d+月\d+日\s*\d+:\d+|前天\s*上午|昨天\s*下午|\d+小時前)/;
-    const junkWords = ['可分境內運', '可分運', '追加', '補充', '取消', '瓜張', '平攤運費', '謝謝', '可分', '可分境'];
+    const junkWords = ['可分境內運', '可分運', '追加', '補充', '取消', '平攤運費', '謝謝', '可分', '可分境'];
 
     for (let i = 0; i < lines.length; i++) {
       let line = lines[i];
@@ -507,7 +506,6 @@
         }
       });
 
-      // 修正：允許含有 *、+、括號、數字的正常買家名字（如 Y哲哲( *·~·* )）
       let isJunk = junkWords.some(j => line === j || line.startsWith(j));
       let isProductSyntax = products.some(p => line.includes(p.name));
 
@@ -551,238 +549,4 @@
         }
       }
       return a.originalIndex - b.originalIndex;
-    });
-
-    saveAllToStorage();
-    renderPreview();
-    alert('智慧整理排序完成！「可自吃一單」買家已優先排在最上方。');
-  }
-
-  function renderPreview() {
-    const g = groupsData[currentGroupId];
-    const products = g.products || [];
-    const buyers = g.buyers || [];
-
-    const tbody = document.getElementById('previewBody');
-    tbody.innerHTML = '';
-    document.getElementById('buyerCount').innerText = buyers.length;
-
-    buyers.forEach(b => {
-      let itemText = [];
-      let totalTwd = 0;
-      let totalJpy = 0;
-
-      Object.keys(b.items).forEach(k => {
-        const q = b.items[k];
-        itemText.push(q > 1 ? `${k}*${q}` : k);
-        const pInfo = products.find(p => p.name === k);
-        if (pInfo) {
-          totalTwd += pInfo.twd * q;
-          totalJpy += pInfo.jpy * q;
-        }
-      });
-
-      const vipBadge = b.canVip ? `<span class="badge-vip">👑 自吃一單</span> ` : '';
-      let trHtml = `<td><b>${b.name}</b></td><td>${itemText.join('+')}</td><td><b>$${totalTwd}</b></td><td>¥${totalJpy}</td><td>${vipBadge}${b.notes || ''}</td>`;
-      const tr = document.createElement('tr');
-      tr.innerHTML = trHtml;
-      tbody.appendChild(tr);
-    });
-  }
-
-  function calculateFinalResults() {
-    const g = groupsData[currentGroupId];
-    const products = g.products || [];
-    const buyers = g.buyers || [];
-
-    const stockMap = {};
-    products.forEach(p => {
-      const bVal = parseInt(p.bought, 10);
-      stockMap[p.name] = isNaN(bVal) ? 9999 : bVal;
-    });
-
-    const tbody = document.getElementById('finalBody');
-    tbody.innerHTML = '';
-    g.calculatedResults = [];
-
-    buyers.forEach(b => {
-      let gotItems = [];
-      let requestedCount = 0;
-      let gotCount = 0;
-
-      Object.keys(b.items).forEach(k => {
-        const qty = b.items[k];
-        requestedCount += qty;
-        const stock = stockMap[k] !== undefined ? stockMap[k] : 0;
-
-        if (stock >= qty) {
-          stockMap[k] -= qty;
-          gotCount += qty;
-          gotItems.push(qty > 1 ? `${k}*${qty}` : k);
-        } else if (stock > 0) {
-          gotCount += stock;
-          gotItems.push(`${k}*${stock}(部分)`);
-          stockMap[k] = 0;
-        }
-      });
-
-      let statusText = '未買到';
-      let statusBadge = `<span class="badge-fail">未買到</span>`;
-      if (gotCount === requestedCount && requestedCount > 0) {
-        statusText = '有買到';
-        statusBadge = `<span class="badge-success">有買到</span>`;
-      } else if (gotCount > 0) {
-        statusText = '部分買到';
-        statusBadge = `<span class="badge-success">部分買到</span>`;
-      }
-
-      g.calculatedResults.push({
-        name: b.name,
-        gotItemsStr: gotItems.join('+') || '無',
-        gotCount,
-        statusText
-      });
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td><b>${b.name}</b></td><td>${gotItems.join('+') || '無'}</td><td>${gotCount}</td><td>${statusBadge}</td>`;
-      tbody.appendChild(tr);
-    });
-
-    saveAllToStorage();
-    alert('買到名單分配計算完成！');
-  }
-
-  function importExcelFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-      const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-
-      if (json.length < 8) {
-        alert('無效的開團登記表 Excel 格式！');
-        return;
-      }
-
-      const pNames = json[1].slice(1);
-      const pJpys = json[2].slice(1);
-      const pTwds = json[3].slice(1);
-
-      document.getElementById('productList').innerHTML = '';
-      pNames.forEach((name, idx) => {
-        if (name) addProductRow(name, pJpys[idx] || 0, pTwds[idx] || 0, '', '');
-      });
-
-      const g = groupsData[currentGroupId];
-      g.buyers = [];
-      for (let r = 7; r < json.length; r++) {
-        const row = json[r];
-        if (row && row[0]) {
-          const name = row[0];
-          const items = {};
-          pNames.forEach((pName, pIdx) => {
-            const qty = parseInt(row[5 + pIdx], 10) || 0;
-            if (qty > 0 && pName) items[pName] = qty;
-          });
-          g.buyers.push({ name, items, notes: row[4] || '', originalIndex: r });
-        }
-      }
-
-      saveCurrentGroupData();
-      renderPreview();
-      alert(`成功還原 【${file.name}】 名單！共 ${g.buyers.length} 位買家，請填寫採購數量進行分配！`);
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function exportGroupExcel() {
-    const g = groupsData[currentGroupId];
-    const buyers = g.buyers || [];
-    if (buyers.length === 0) {
-      alert('請先匯入喊單資料！');
-      return;
     }
-
-    const groupName = g.name || '團務表';
-    const products = g.products || [];
-
-    const sheetData = [];
-    sheetData.push([]);
-
-    const row2 = ['品名'];
-    products.forEach(p => row2.push(p.name));
-    sheetData.push(row2);
-
-    const row3 = ['日幣'];
-    products.forEach(p => row3.push(p.jpy));
-    sheetData.push(row3);
-
-    const row4 = ['定價(未二補)'];
-    products.forEach(p => row4.push(p.twd));
-    sheetData.push(row4);
-
-    const row5 = ['總數'];
-    products.forEach(p => {
-      let sum = 0;
-      buyers.forEach(b => sum += (b.items[p.name] || 0));
-      row5.push(sum);
-    });
-    sheetData.push(row5);
-
-    sheetData.push([]);
-
-    const row7 = ['名字', '品項', '價格', '日幣', '備註'];
-    sheetData.push(row7);
-
-    buyers.forEach(b => {
-      let itemStrParts = [];
-      let totalTwd = 0;
-      let totalJpy = 0;
-
-      Object.keys(b.items).forEach(k => {
-        const q = b.items[k];
-        itemStrParts.push(q > 1 ? `${k}*${q}` : k);
-        const pInfo = products.find(p => p.name === k);
-        if (pInfo) {
-          totalTwd += pInfo.twd * q;
-          totalJpy += pInfo.jpy * q;
-        }
-      });
-
-      const row = [b.name, itemStrParts.join('+'), totalTwd, totalJpy, b.notes || ''];
-      sheetData.push(row);
-    });
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    XLSX.utils.book_append_sheet(wb, ws, groupName);
-    XLSX.writeFile(wb, `${groupName}_開團登記表.xlsx`);
-  }
-
-  function exportFinalExcel() {
-    const g = groupsData[currentGroupId];
-    const calc = g.calculatedResults || [];
-    if (calc.length === 0) {
-      alert('請先點擊「3. 生成買到名單」！');
-      return;
-    }
-
-    const groupName = g.name || '團務表';
-    const sheetData = [['名字', '買到品項', '數量', '分配結果']];
-
-    calc.forEach(r => {
-      sheetData.push([r.name, r.gotItemsStr, r.gotCount, r.statusText]);
-    });
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    XLSX.utils.book_append_sheet(wb, ws, '買到名單');
-    XLSX.writeFile(wb, `${groupName}_最終買到名單.xlsx`);
-  }
-</script>
-</body>
-</html>
