@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>芊芊代購 - 智慧團務整理系統 (圖片自動建品項版)</title>
+  <title>芊芊代購 - 智慧團務整理系統 (商品記憶與一鍵清空版)</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
     :root {
       --primary-color: #f06292;
@@ -68,7 +67,7 @@
     }
     .product-row {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1.2fr 1.2fr 40px;
+      grid-template-columns: 2fr 1fr 1fr 1.2fr 1.2fr 40px 40px;
       gap: 10px;
       margin-bottom: 10px;
       align-items: center;
@@ -104,6 +103,19 @@
     }
     .btn-reset:hover {
       background-color: #f57c00;
+    }
+    .btn-copy {
+      background-color: #0288d1;
+      padding: 8px;
+      border-radius: 6px;
+      line-height: 1;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-copy:hover {
+      background-color: #01579b;
     }
     .btn-del {
       background-color: #ef5350;
@@ -155,23 +167,6 @@
       border-radius: 4px;
       font-weight: bold;
     }
-    .upload-area {
-      border: 2px dashed var(--primary-color);
-      border-radius: 8px;
-      padding: 15px;
-      text-align: center;
-      background: #fff5f8;
-      cursor: pointer;
-      margin-bottom: 15px;
-    }
-    .upload-area:hover {
-      background: #ffe0b2;
-    }
-    #pOcrStatus {
-      font-weight: bold;
-      color: #d81b60;
-      margin-top: 5px;
-    }
     .import-box {
       background-color: #f3e5f5;
       border: 2px dashed #ab47bc;
@@ -179,6 +174,12 @@
       border-radius: 8px;
       margin-bottom: 15px;
       text-align: center;
+    }
+    .history-bar {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
     }
   </style>
 </head>
@@ -194,7 +195,7 @@
   </div>
 
   <!-- 步驟 1：開團設定 -->
-  <div class="section-title">步驟 1：開團基本設定與商品建檔</div>
+  <div class="section-title">步驟 1：開團基本設定與商品 (支援商品記憶與一鍵清空)</div>
   <div class="grid-2">
     <div>
       <label>開團名稱 (例如：0928平行受注團)</label>
@@ -207,16 +208,23 @@
   </div>
 
   <div style="margin-top: 15px;">
-    <!-- 新增：官網截圖辨識建品項 -->
-    <div class="upload-area" onclick="document.getElementById('productImgInput').click()">
-      📸 <b>點擊上傳官網宣傳圖 / 價格截圖（自動辨識品名、日幣並計算台幣定價）</b>
-      <input type="file" id="productImgInput" accept="image/*" style="display:none" onchange="handleProductImageUpload(event)">
-      <div id="pOcrStatus"></div>
-    </div>
-
     <label>商品清單 (名稱 / 日幣 / 台幣 / 個別特例限購 / 實際買到數)</label>
     <div id="productList"></div>
-    <button class="btn btn-secondary" onclick="addProductRow()" style="margin-top: 5px;">+ 新增空白商品</button>
+    
+    <datalist id="historyProductList"></datalist>
+
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="addProductRow()">+ 新增空白商品</button>
+      <button class="btn btn-del" style="border-radius:6px; padding:10px 15px;" onclick="clearProductRows()">🗑️ 一鍵清空所有商品</button>
+    </div>
+
+    <!-- 歷史商品快速選單 -->
+    <div class="history-bar">
+      <label style="margin:0; white-space:nowrap;">📜 快捷帶回歷史商品：</label>
+      <select id="historySelect" onchange="addFromHistory(this.value)">
+        <option value="">-- 請選擇曾建立過的歷史商品 --</option>
+      </select>
+    </div>
   </div>
 
   <!-- 步驟 2：匯入喊單 -->
@@ -226,7 +234,7 @@
   <div class="actions">
     <button class="btn" onclick="processOrders()">1. 解析留言並匯入</button>
     <button class="btn btn-secondary" onclick="sortOrders()">2. 智慧整理排序</button>
-    <button class="btn btn-reset" onclick="clearAllData()">🧹 一鍵清空內容 (開新團)</button>
+    <button class="btn btn-reset" onclick="clearAllData()">🧹 一鍵清空對話與名單 (開新團)</button>
   </div>
 
   <!-- 整理結果預覽 -->
@@ -283,26 +291,91 @@
 
   let parsedBuyers = [];
   let calculatedResults = [];
+  let productHistory = JSON.parse(localStorage.getItem('qian_product_history') || '{}');
 
   window.onload = function() {
     defaultProducts.forEach(p => addProductRow(p.name, p.jpy, p.twd, p.limit, p.bought));
+    updateHistoryUI();
   };
 
   function addProductRow(name = '', jpy = '', twd = '', limit = '', bought = '') {
     const div = document.createElement('div');
     div.className = 'product-row';
     div.innerHTML = `
-      <input type="text" placeholder="正式商品名稱" class="p-name" value="${name}">
-      <input type="number" placeholder="日幣" class="p-jpy" value="${jpy}" onchange="calcRowTwd(this)">
-      <input type="number" placeholder="台幣定價" class="p-twd" value="${twd}">
-      <input type="number" placeholder="限購上限(無不填)" class="p-limit" value="${limit}">
+      <input type="text" placeholder="正式商品名稱" class="p-name" value="${name}" list="historyProductList" onchange="saveToHistory(this)">
+      <input type="number" placeholder="日幣" class="p-jpy" value="${jpy}" onchange="calcRowTwd(this); saveToHistory(this);">
+      <input type="number" placeholder="台幣定價" class="p-twd" value="${twd}" onchange="saveToHistory(this)">
+      <input type="number" placeholder="限購上限(無不填)" class="p-limit" value="${limit}" onchange="saveToHistory(this)">
       <input type="number" placeholder="實際買到數" class="p-bought" value="${bought}">
-      <button class="btn-del" onclick="this.parentElement.remove()">✕</button>
+      <button class="btn-copy" title="複製此商品資訊" onclick="copyProductRow(this)">📋</button>
+      <button class="btn-del" title="刪除此商品" onclick="this.parentElement.remove()">✕</button>
     `;
     document.getElementById('productList').appendChild(div);
   }
 
-  // 自動依匯率算定台幣定價 (五捨六入/四捨五入)
+  // 儲存商品至瀏覽器快取記憶
+  function saveToHistory(elem) {
+    const row = elem.parentElement;
+    const name = row.querySelector('.p-name').value.trim();
+    const jpy = row.querySelector('.p-jpy').value;
+    const twd = row.querySelector('.p-twd').value;
+    const limit = row.querySelector('.p-limit').value;
+
+    if (name) {
+      productHistory[name] = { name, jpy, twd, limit };
+      localStorage.setItem('qian_product_history', JSON.stringify(productHistory));
+      updateHistoryUI();
+    }
+  }
+
+  // 更新歷史選單 UI
+  function updateHistoryUI() {
+    const dataList = document.getElementById('historyProductList');
+    const selectElem = document.getElementById('historySelect');
+    
+    dataList.innerHTML = '';
+    selectElem.innerHTML = '<option value="">-- 請選擇曾建立過的歷史商品 --</option>';
+
+    Object.keys(productHistory).forEach(key => {
+      const p = productHistory[key];
+      
+      const opt1 = document.createElement('option');
+      opt1.value = p.name;
+      dataList.appendChild(opt1);
+
+      const opt2 = document.createElement('option');
+      opt2.value = p.name;
+      opt2.innerText = `${p.name} (日幣:¥${p.jpy} / 台幣:$${p.twd})`;
+      selectElem.appendChild(opt2);
+    });
+  }
+
+  // 從歷史紀錄一鍵帶回品項
+  function addFromHistory(name) {
+    if (!name || !productHistory[name]) return;
+    const p = productHistory[name];
+    addProductRow(p.name, p.jpy, p.twd, p.limit, '');
+    document.getElementById('historySelect').value = '';
+  }
+
+  // 一鍵清空所有商品
+  function clearProductRows() {
+    if (confirm('確定要清空目前頁面上的商品列表嗎？（歷史記憶依然會保留，隨時可重新選取加入）')) {
+      document.getElementById('productList').innerHTML = '';
+    }
+  }
+
+  function copyProductRow(btnElem) {
+    const row = btnElem.parentElement;
+    const name = row.querySelector('.p-name').value;
+    const jpy = row.querySelector('.p-jpy').value;
+    const twd = row.querySelector('.p-twd').value;
+    const limit = row.querySelector('.p-limit').value;
+    const bought = row.querySelector('.p-bought').value;
+    
+    addProductRow(name, jpy, twd, limit, bought);
+  }
+
   function calcRowTwd(inputElem) {
     const row = inputElem.parentElement;
     const jpy = parseFloat(inputElem.value) || 0;
@@ -310,51 +383,6 @@
     const twdInput = row.querySelector('.p-twd');
     if (jpy > 0 && !twdInput.value) {
       twdInput.value = Math.round(jpy * rate);
-    }
-  }
-
-  // 官網圖片 OCR 建檔功能
-  async function handleProductImageUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const statusDiv = document.getElementById('pOcrStatus');
-    statusDiv.innerText = '⏳ 正在讀取官網圖片並辨識商品與價格，請稍候...';
-
-    try {
-      const worker = await Tesseract.createWorker('chi_tra+eng');
-      const ret = await worker.recognize(file);
-      await worker.terminate();
-
-      const text = ret.data.text;
-      const rate = parseFloat(document.getElementById('exchangeRate').value) || 0.24;
-      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
-      let foundCount = 0;
-      let tempName = '';
-
-      lines.forEach(line => {
-        // 抓取日幣價格格式 (例: ¥1,540 或 2420)
-        const priceMatch = line.match(/(?:¥|￥)?\s*([1-9],?\d{3}|[1-9]\d{2})/);
-        if (priceMatch) {
-          const jpy = parseInt(priceMatch[1].replace(',', ''), 10);
-          const twd = Math.round(jpy * rate);
-          const finalName = tempName || '新辨識商品';
-          addProductRow(finalName, jpy, twd, '', '');
-          foundCount++;
-          tempName = '';
-        } else {
-          // 若不是價格，當作品名備選
-          if (line.length > 2 && line.length < 30 && !line.includes('含稅') && !line.includes('開售前')) {
-            tempName = line.replace(/吉伊卡哇\s*/g, '').trim();
-          }
-        }
-      });
-
-      statusDiv.innerText = `✅ 辨識完成！共自動建立 ${foundCount} 項商品，請在下方檢查或微調名稱！`;
-    } catch (err) {
-      statusDiv.innerText = '❌ 辨識失敗，請改用手動新增商品。';
-      console.error(err);
     }
   }
 
@@ -593,14 +621,14 @@
   }
 
   function clearAllData() {
-    if (confirm('確定要清空所有內容嗎？')) {
+    if (confirm('確定要清空喊單文字與已整理的名單嗎？')) {
       document.getElementById('rawLineText').value = '';
       parsedBuyers = [];
       calculatedResults = [];
       document.getElementById('previewBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">尚未匯入名單</td></tr>`;
       document.getElementById('finalBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">尚未計算分配結果</td></tr>`;
       document.getElementById('buyerCount').innerText = '0';
-      alert('已清空所有內容！');
+      alert('已清空對話與名單！');
     }
   }
 
