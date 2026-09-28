@@ -63,6 +63,8 @@
     .btn-secondary:hover { background-color: #546e7a; }
     .btn-success { background-color: #2e7d32; }
     .btn-success:hover { background-color: #1b5e20; }
+    .btn-reset { background-color: #ff9800; }
+    .btn-reset:hover { background-color: #f57c00; }
     .btn-copy { background-color: #0288d1; padding: 7px; border-radius: 6px; color: white; border: none; cursor: pointer; font-weight: bold; }
     .btn-del { background-color: #ef5350; padding: 7px; border-radius: 50%; color: white; border: none; cursor: pointer; }
     .actions { margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
@@ -118,7 +120,10 @@
         <label>商品清單 (輸入日幣會自動試算台幣，也可手動修改台幣與獨立限購)</label>
         <div id="productList"></div>
         <datalist id="historyProductList"></datalist>
-        <button class="btn btn-secondary" onclick="addProductRow()" style="margin-top: 5px;">+ 新增商品</button>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="addProductRow()" style="margin-top: 5px;">+ 新增商品</button>
+          <button class="btn btn-del" style="border-radius:6px; padding:9px 16px;" onclick="clearProductRows()">🗑️ 一鍵清空商品清單</button>
+        </div>
       </div>
 
       <!-- 相近詞 / 別名設定 -->
@@ -134,6 +139,7 @@
       <div class="actions">
         <button class="btn" onclick="processOrders()">1. 解析留言並匯入</button>
         <button class="btn btn-secondary" onclick="sortOrders()">2. 智慧整理排序 (可自吃一車優先)</button>
+        <button class="btn btn-reset" onclick="clearRawTextAndPreview()">🧹 一鍵清空喊單文字與預覽名單</button>
       </div>
 
       <!-- 整理結果預覽 -->
@@ -213,16 +219,16 @@
       rate: 0.24,
       globalLimit: 1,
       products: isFirstTime ? [
-        { name: '南瓜兔兔', jpy: 2420, twd: 581, limit: '', bought: '' },
-        { name: '幽靈吉伊', jpy: 1540, twd: 370, limit: '', bought: '' },
-        { name: '幽靈小八', jpy: 1540, twd: 370, limit: '', bought: '' },
-        { name: '幽靈兔兔', jpy: 1540, twd: 370, limit: '', bought: '' },
-        { name: '夜光T', jpy: 4180, twd: 1003, limit: '', bought: '' }
+        { name: '南瓜兔兔娃', jpy: 2420, twd: 581, limit: '', bought: '' },
+        { name: '吉伊幽靈吊飾娃', jpy: 1540, twd: 370, limit: '', bought: '' },
+        { name: '小八幽靈吊飾娃', jpy: 1540, twd: 370, limit: '', bought: '' },
+        { name: '兔兔幽靈吊飾娃', jpy: 1540, twd: 370, limit: '', bought: '' },
+        { name: '夜光GHOST藏青T恤L', jpy: 4180, twd: 1003, limit: '', bought: '' }
       ] : [],
       aliases: isFirstTime ? [
-        { alias: '烏薩奇, 兔子', official: '幽靈兔兔' },
-        { alias: '小八貓', official: '幽靈小八' },
-        { alias: '夜光踢, 踢恤, T恤', official: '夜光T' }
+        { alias: '烏薩奇, 兔子', official: '兔兔幽靈吊飾娃' },
+        { alias: '小八貓', official: '小八幽靈吊飾娃' },
+        { alias: '夜光踢, 踢恤, T恤', official: '夜光GHOST藏青T恤L' }
       ] : [],
       rawText: '',
       buyers: []
@@ -380,6 +386,13 @@
     document.getElementById('productList').appendChild(div);
   }
 
+  function clearProductRows() {
+    if (confirm('確定要清空當前專案的商品清單嗎？')) {
+      document.getElementById('productList').innerHTML = '';
+      saveCurrentGroupData();
+    }
+  }
+
   function addAliasRow(alias = '', official = '') {
     const div = document.createElement('div');
     div.className = 'alias-row';
@@ -402,7 +415,6 @@
     saveCurrentGroupData();
   }
 
-  // 輸入日幣自動試算台幣 (按 0.24 匯率四捨五入，可手動修改)
   function calcRowTwd(inputElem) {
     const row = inputElem.parentElement;
     const jpy = parseFloat(inputElem.value) || 0;
@@ -426,7 +438,23 @@
     saveCurrentGroupData();
   }
 
-  // 1. 解析喊單 (精準防誤抓與自動比對)
+  // 清空喊單文字與預覽名單按鈕功能
+  function clearRawTextAndPreview() {
+    if (confirm('確定要清空喊單文字與解析結果嗎？（商品清單會保留）')) {
+      document.getElementById('rawLineText').value = '';
+      const g = groupsData[currentGroupId];
+      if (g) {
+        g.rawText = '';
+        g.buyers = [];
+        g.calculatedResults = [];
+      }
+      saveAllToStorage();
+      renderPreview();
+      document.getElementById('finalBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">尚未計算分配結果</td></tr>`;
+      alert('喊單文字與預覽名單已成功清空！');
+    }
+  }
+
   function processOrders() {
     saveCurrentGroupData();
     const g = groupsData[currentGroupId];
@@ -440,7 +468,6 @@
     const aliases = g.aliases || [];
     const globalLimit = isNaN(g.globalLimit) ? 1 : g.globalLimit;
 
-    // 建立別名字典
     const aliasMap = {};
     aliases.forEach(a => {
       const list = a.alias.split(/[,，]/);
@@ -452,14 +479,12 @@
     const buyerOrder = [];
     let currentName = '';
 
-    // 時間戳記與雜訊過濾正則
     const timePattern = /^(\d+月\d+日|\d+小時前|昨天|前天|今天|\d+:\d+|\d+月\d+日\s*\d+:\d+)/;
     const junkPattern = /^(可分境內運|可分運|追加|補充|取消|瓜張|平攤運費|謝謝|可分|8小時前|9月\d+日)/;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
-      // 過濾時間戳記與純雜訊行
       if (timePattern.test(line) || junkPattern.test(line)) {
         if (line.includes('可自吃') && currentName && buyerMap[currentName]) {
           buyerMap[currentName].notes = (buyerMap[currentName].notes ? buyerMap[currentName].notes + '；' : '') + line;
@@ -468,7 +493,6 @@
         continue;
       }
 
-      // 尺寸與補充說明自動抓入「備註」
       const sizeMatch = line.match(/(?:尺寸|號|號碼)?\s*(S|M|L|XL|2XL|3XL)/i);
       let detectedSizeNote = '';
       if (sizeMatch) detectedSizeNote = `尺寸:${sizeMatch[1].toUpperCase()}`;
@@ -479,7 +503,6 @@
         }
       }
 
-      // 處理「取消」
       if (line.includes('取消')) {
         if (currentName && buyerMap[currentName]) {
           products.forEach(p => {
@@ -492,19 +515,16 @@
         continue;
       }
 
-      // 檢查是否為商品喊單
       let matchedLine = false;
       let isThreeSet = line.includes('三小隻') || line.includes('三隻') || line.includes('3隻');
 
       products.forEach(p => {
         let isMatch = line.includes(p.name) || p.name.includes(line.replace(/小娃|吊飾|娃|\(小\)|（小）|鑰匙圈|\s+/g, ''));
         
-        // 別名比對
         for (let aliasKey in aliasMap) {
           if (line.includes(aliasKey) && aliasMap[aliasKey] === p.name) isMatch = true;
         }
 
-        // 三小隻自動拆解
         if (isThreeSet && (p.name.includes('吉伊') || p.name.includes('小八') || p.name.includes('兔兔'))) {
           if (line.includes('磁鐵') && p.name.includes('磁鐵')) isMatch = true;
           else if (line.includes('貼紙') && p.name.includes('貼紙')) isMatch = true;
@@ -517,11 +537,9 @@
           const qtyMatch = line.match(/(?:\+|\*|x|X|\s*)(\d+)/);
           if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
 
-          // 判斷限購 (優先使用單品限購，無則套用全團預設)
           const singleLimit = p.limit !== '' ? (parseInt(p.limit, 10) || 0) : globalLimit;
           if (singleLimit > 0 && qty > singleLimit) qty = singleLimit;
 
-          // 確定買家名字（往前尋找非喊單且不含雜訊的短名字）
           if (!currentName && i > 0) {
             for (let j = i - 1; j >= 0; j--) {
               const prev = lines[j];
@@ -548,7 +566,6 @@
         }
       });
 
-      // 若該行非喊單，且字數短、不含時間雜訊，則設定為潛在買家名字
       if (!matchedLine && !timePattern.test(line) && !junkPattern.test(line) && line.length < 15 && !line.includes('+') && !line.includes('*')) {
         currentName = line;
       }
@@ -567,7 +584,6 @@
     alert(`解析成功！共抓取 ${g.buyers.length} 位買家名單！`);
   }
 
-  // 2. 智慧整理排序 (可自吃一車排最前)
   function sortOrders() {
     const g = groupsData[currentGroupId];
     if (!g.buyers || g.buyers.length === 0) {
@@ -750,7 +766,7 @@
     const products = g.products || [];
 
     const sheetData = [];
-    sheetData.push([]); // Row 1
+    sheetData.push([]);
 
     const row2 = ['品名'];
     products.forEach(p => row2.push(p.name));
@@ -772,7 +788,7 @@
     });
     sheetData.push(row5);
 
-    sheetData.push([]); // Row 6
+    sheetData.push([]);
 
     const row7 = ['名字', '品項', '價格', '日幣', '備註'];
     sheetData.push(row7);
