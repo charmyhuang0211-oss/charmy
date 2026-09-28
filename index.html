@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>芊芊代購 - 智慧團務整理與分配系統</title>
-  <!-- 載入 SheetJS 庫以支援匯出標準 Excel 檔案 -->
+  <title>芊芊代購 - 智慧團務整理系統 (支援截圖辨識)</title>
+  <!-- 載入 SheetJS (Excel匯出) 與 Tesseract.js (圖片OCR辨識) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
     :root {
       --primary-color: #f06292;
@@ -63,7 +64,7 @@
       font-size: 0.95rem;
     }
     textarea {
-      height: 150px;
+      height: 120px;
       resize: vertical;
     }
     .product-row {
@@ -108,8 +109,25 @@
     .btn-del:hover {
       background-color: #c62828;
     }
+    .upload-area {
+      border: 2px dashed var(--primary-color);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      background: #fff5f8;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+    .upload-area:hover {
+      background: #ffe0b2;
+    }
+    #ocrStatus {
+      font-weight: bold;
+      color: #d81b60;
+      margin-top: 5px;
+    }
     .actions {
-      margin-top: 20px;
+      margin-top: 15px;
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
@@ -174,9 +192,18 @@
     <button class="btn btn-secondary" onclick="addProductRow()" style="margin-top: 5px;">+ 新增商品</button>
   </div>
 
-  <!-- 貼上喊單區域 -->
-  <div class="section-title">步驟 2：貼上 LINE 喊單內容</div>
-  <textarea id="rawLineText" placeholder="請直接貼上 LINE 記事本整段對話訊息..."></textarea>
+  <!-- 步驟 2：上傳截圖 OR 貼文字 -->
+  <div class="section-title">步驟 2：匯入喊單 (上傳 LINE 記事本截圖 或 貼上文字)</div>
+  
+  <div class="upload-area" onclick="document.getElementById('imageInput').click()">
+    📸 <b>點擊或拖曳上傳 LINE 記事本截圖</b>
+    <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
+    <div id="ocrStatus"></div>
+  </div>
+
+  <label>或直接貼上對話文字：</label>
+  <textarea id="rawLineText" placeholder="上傳截圖後辨識出的文字會出現在這裡，也可以手動調整..."></textarea>
+  
   <div class="actions">
     <button class="btn" onclick="processOrders()">1. 解析留言並匯入</button>
     <button class="btn btn-secondary" onclick="sortOrders()">2. 智慧整理排序</button>
@@ -237,7 +264,6 @@
   let parsedBuyers = [];
   let calculatedResults = [];
 
-  // 初始化預設商品
   window.onload = function() {
     defaultProducts.forEach(p => addProductRow(p.name, p.jpy, p.twd, p.bought));
   };
@@ -271,11 +297,32 @@
     return products;
   }
 
+  // 圖片上傳辨識 (OCR)
+  async function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const statusDiv = document.getElementById('ocrStatus');
+    statusDiv.innerText = '⏳ 正在讀取並辨識圖片文字，請稍候...';
+
+    try {
+      const worker = await Tesseract.createWorker('chi_tra+eng');
+      const ret = await worker.recognize(file);
+      await worker.terminate();
+
+      document.getElementById('rawLineText').value = ret.data.text;
+      statusDiv.innerText = '✅ 圖片文字辨識完成！請確認上方框內文字後點擊「解析留言並匯入」。';
+    } catch (err) {
+      statusDiv.innerText = '❌ 辨識失敗，請改用貼上文字方式。';
+      console.error(err);
+    }
+  }
+
   // 1. 解析喊單
   function processOrders() {
     const rawText = document.getElementById('rawLineText').value;
     if (!rawText.trim()) {
-      alert('請先貼上 LINE 喊單對話！');
+      alert('請先上傳圖片或貼上 LINE 喊單對話！');
       return;
     }
 
@@ -323,7 +370,6 @@
     }));
 
     renderPreview();
-    document.getElementById('rawLineText').value = '';
     alert(`解析成功！共抓取 ${parsedBuyers.length} 位買家名單。`);
   }
 
@@ -340,13 +386,13 @@
       const aTypes = aKeys.length;
       const bTypes = bKeys.length;
 
-      if (aTypes !== bTypes) return bTypes - aTypes; // 多品項優先
+      if (aTypes !== bTypes) return bTypes - aTypes;
       if (aTypes === 1 && bTypes === 1) {
         if (aKeys[0] !== bKeys[0]) {
-          return aKeys[0].localeCompare(bKeys[0], 'zh-Hant'); // 同品項集中
+          return aKeys[0].localeCompare(bKeys[0], 'zh-Hant');
         }
       }
-      return a.originalIndex - b.originalIndex; // 保持時間順序
+      return a.originalIndex - b.originalIndex;
     });
 
     renderPreview();
