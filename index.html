@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>芊芊代購 - 智慧團務整理系統 (高級喊單解析版)</title>
+  <title>芊芊代購 - 智慧團務整理系統</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
@@ -33,114 +33,31 @@
       padding: 15px;
       flex-shrink: 0;
     }
-    .sidebar h2 {
-      font-size: 1.1rem;
-      color: #880e4f;
-      margin-top: 0;
-      margin-bottom: 15px;
-      text-align: center;
-    }
+    .sidebar h2 { font-size: 1.1rem; color: #880e4f; margin-top: 0; margin-bottom: 15px; text-align: center; }
     .btn-new-group {
-      background-color: #c2185b;
-      color: white;
-      border: none;
-      padding: 10px;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-bottom: 15px;
-      width: 100%;
-      text-align: center;
+      background-color: #c2185b; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 15px; width: 100%; text-align: center;
     }
     .btn-new-group:hover { background-color: #ad1457; }
-    .group-list {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+    .group-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
     .group-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px;
-      background: rgba(255, 255, 255, 0.6);
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: background 0.2s;
+      display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255, 255, 255, 0.6); border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: background 0.2s;
     }
     .group-item:hover { background: rgba(255, 255, 255, 0.9); }
-    .group-item.active {
-      background: white;
-      border-left: 4px solid var(--primary-hover);
-      font-weight: bold;
-      color: #c2185b;
-    }
-    .btn-group-del {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 0.9rem;
-      opacity: 0.6;
-      padding: 2px 5px;
-    }
+    .group-item.active { background: white; border-left: 4px solid var(--primary-hover); font-weight: bold; color: #c2185b; }
+    .btn-group-del { background: none; border: none; cursor: pointer; font-size: 0.9rem; opacity: 0.6; padding: 2px 5px; }
     .btn-group-del:hover { opacity: 1; color: #d32f2f; }
 
-    .main-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 25px;
-      background: var(--bg-color);
-    }
-    .container {
-      max-width: 1050px;
-      margin: 0 auto;
-      background: var(--card-bg);
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-    }
+    .main-content { flex: 1; overflow-y: auto; padding: 25px; background: var(--bg-color); }
+    .container { max-width: 1000px; margin: 0 auto; background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); }
     h1 { color: #c2185b; margin-top: 0; margin-bottom: 20px; font-size: 1.5rem; }
-    .section-title {
-      font-size: 1.1rem;
-      font-weight: bold;
-      color: #880e4f;
-      border-left: 5px solid var(--primary-color);
-      padding-left: 10px;
-      margin-top: 25px;
-      margin-bottom: 15px;
-    }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .section-title { font-size: 1.1rem; font-weight: bold; color: #880e4f; border-left: 5px solid var(--primary-color); padding-left: 10px; margin-top: 25px; margin-bottom: 15px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
     label { font-size: 0.88rem; font-weight: bold; margin-bottom: 5px; display: block; }
-    input[type="text"], input[type="number"], select, textarea {
-      width: 100%;
-      padding: 9px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 0.9rem;
-    }
+    input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; }
     textarea { height: 130px; resize: vertical; }
-    .product-row {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1.2fr 1.2fr 35px 35px;
-      gap: 8px;
-      margin-bottom: 8px;
-      align-items: center;
-    }
-    .btn {
-      background-color: var(--primary-color);
-      color: white;
-      border: none;
-      padding: 9px 16px;
-      font-size: 0.95rem;
-      font-weight: bold;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
+    .product-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr 1.2fr 35px 35px; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .alias-row { display: grid; grid-template-columns: 2fr 2fr 35px; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .btn { background-color: var(--primary-color); color: white; border: none; padding: 9px 16px; font-size: 0.95rem; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
     .btn:hover { background-color: var(--primary-hover); }
     .btn-secondary { background-color: #78909c; }
     .btn-secondary:hover { background-color: #546e7a; }
@@ -157,6 +74,7 @@
     .badge-success { background: #c8e6c9; color: #2e7d32; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
     .badge-fail { background: #ffcdd2; color: #c62828; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
     .import-box { background-color: #f3e5f5; border: 2px dashed #ab47bc; padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-size: 0.9rem; }
+    .tip-box { background-color: #e1f5fe; border-left: 4px solid #0288d1; padding: 8px 12px; font-size: 0.85rem; margin-bottom: 10px; border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -180,11 +98,15 @@
       </div>
 
       <!-- 步驟 1：開團設定 -->
-      <div class="section-title">步驟 1：本團商品與設定 (輸入商品名自動提示歷史品項)</div>
-      <div class="grid-2">
+      <div class="section-title">步驟 1：本團基本設定與商品清單</div>
+      <div class="grid-3">
         <div>
           <label>團務名稱</label>
           <input type="text" id="groupName" onchange="updateCurrentGroupName(this.value)">
+        </div>
+        <div>
+          <label>全團預設限購 (填0不限)</label>
+          <input type="number" id="globalLimitQty" value="1" min="0" onchange="saveCurrentGroupData()">
         </div>
         <div>
           <label>計算匯率 (日幣 × 匯率 ＝ 台幣)</label>
@@ -193,13 +115,17 @@
       </div>
 
       <div style="margin-top: 15px;">
-        <label>商品清單 (名稱 / 日幣 / 台幣 / 限購 / 實際買到數)</label>
+        <label>商品清單 (輸入日幣會自動試算台幣，也可手動修改台幣與獨立限購)</label>
         <div id="productList"></div>
-        
         <datalist id="historyProductList"></datalist>
-
         <button class="btn btn-secondary" onclick="addProductRow()" style="margin-top: 5px;">+ 新增商品</button>
       </div>
+
+      <!-- 相近詞 / 別名設定 -->
+      <div class="section-title">相近關鍵字與別名對照 (俗稱 ➔ 正式品名)</div>
+      <div class="tip-box">💡 <b>別名對照：</b> 設定「烏薩奇, 兔子 ➔ 幽靈兔兔」，當客人打「烏薩奇吊飾」時，系統就會精準對齊到「幽靈兔兔」！多個別名請用逗號隔開。</div>
+      <div id="aliasList"></div>
+      <button class="btn btn-secondary" onclick="addAliasRow()" style="margin-top: 5px;">+ 新增別名對照</button>
 
       <!-- 步驟 2：匯入喊單 -->
       <div class="section-title">步驟 2：匯入喊單文字 (貼上 LINE 記事本內容)</div>
@@ -210,7 +136,7 @@
         <button class="btn btn-secondary" onclick="sortOrders()">2. 智慧整理排序 (可自吃一車優先)</button>
       </div>
 
-      <!-- 整理結果預覽 (含備註欄位) -->
+      <!-- 整理結果預覽 -->
       <div class="section-title">階段一：登記名單預覽 (<span id="buyerCount">0</span> 人)</div>
       <div style="overflow-x: auto;">
         <table id="previewTable">
@@ -220,7 +146,7 @@
               <th>品項</th>
               <th>台幣價格</th>
               <th>日幣價格</th>
-              <th>備註 (替代尺寸/自吃一單)</th>
+              <th>備註 (尺寸/自吃一單/替代說明)</th>
             </tr>
           </thead>
           <tbody id="previewBody">
@@ -285,11 +211,18 @@
       id,
       name,
       rate: 0.24,
+      globalLimit: 1,
       products: isFirstTime ? [
         { name: '南瓜兔兔', jpy: 2420, twd: 581, limit: '', bought: '' },
         { name: '幽靈吉伊', jpy: 1540, twd: 370, limit: '', bought: '' },
         { name: '幽靈小八', jpy: 1540, twd: 370, limit: '', bought: '' },
-        { name: '幽靈兔兔', jpy: 1540, twd: 370, limit: '', bought: '' }
+        { name: '幽靈兔兔', jpy: 1540, twd: 370, limit: '', bought: '' },
+        { name: '夜光T', jpy: 4180, twd: 1003, limit: '', bought: '' }
+      ] : [],
+      aliases: isFirstTime ? [
+        { alias: '烏薩奇, 兔子', official: '幽靈兔兔' },
+        { alias: '小八貓', official: '幽靈小八' },
+        { alias: '夜光踢, 踢恤, T恤', official: '夜光T' }
       ] : [],
       rawText: '',
       buyers: []
@@ -352,16 +285,22 @@
 
     document.getElementById('groupName').value = g.name;
     document.getElementById('exchangeRate').value = g.rate || 0.24;
+    document.getElementById('globalLimitQty').value = g.globalLimit !== undefined ? g.globalLimit : 1;
     document.getElementById('rawLineText').value = g.rawText || '';
     document.getElementById('currentGroupTitle').innerText = g.name;
 
     const pList = document.getElementById('productList');
     pList.innerHTML = '';
-    
     if (g.products && g.products.length > 0) {
       g.products.forEach(p => addProductRow(p.name, p.jpy, p.twd, p.limit, p.bought));
     } else {
       addProductRow();
+    }
+
+    const aList = document.getElementById('aliasList');
+    aList.innerHTML = '';
+    if (g.aliases && g.aliases.length > 0) {
+      g.aliases.forEach(a => addAliasRow(a.alias, a.official));
     }
 
     renderPreview();
@@ -373,6 +312,7 @@
     const g = groupsData[currentGroupId];
     g.name = document.getElementById('groupName').value.trim() || '未命名團務';
     g.rate = parseFloat(document.getElementById('exchangeRate').value) || 0.24;
+    g.globalLimit = parseInt(document.getElementById('globalLimitQty').value, 10);
     g.rawText = document.getElementById('rawLineText').value;
 
     const rows = document.querySelectorAll('.product-row');
@@ -388,8 +328,17 @@
         globalHistory[name] = { name, jpy, twd, limit };
       }
     });
-
     g.products = products;
+
+    const aliasRows = document.querySelectorAll('.alias-row');
+    const aliases = [];
+    aliasRows.forEach(r => {
+      const alias = r.querySelector('.a-alias').value.trim();
+      const official = r.querySelector('.a-official').value.trim();
+      if (alias && official) aliases.push({ alias, official });
+    });
+    g.aliases = aliases;
+
     saveAllToStorage();
     updateDatalist();
   }
@@ -421,7 +370,7 @@
     div.className = 'product-row';
     div.innerHTML = `
       <input type="text" placeholder="商品名稱" class="p-name" value="${name}" list="historyProductList" onchange="onNameChange(this)">
-      <input type="number" placeholder="日幣" class="p-jpy" value="${jpy}" onchange="calcRowTwd(this)">
+      <input type="number" placeholder="日幣" class="p-jpy" value="${jpy}" oninput="calcRowTwd(this)">
       <input type="number" placeholder="台幣" class="p-twd" value="${twd}" onchange="saveCurrentGroupData()">
       <input type="number" placeholder="限購" class="p-limit" value="${limit}" onchange="saveCurrentGroupData()">
       <input type="number" placeholder="買到" class="p-bought" value="${bought}" onchange="saveCurrentGroupData()">
@@ -429,6 +378,17 @@
       <button class="btn-del" title="刪除" onclick="this.parentElement.remove(); saveCurrentGroupData();">✕</button>
     `;
     document.getElementById('productList').appendChild(div);
+  }
+
+  function addAliasRow(alias = '', official = '') {
+    const div = document.createElement('div');
+    div.className = 'alias-row';
+    div.innerHTML = `
+      <input type="text" placeholder="客人打的別名 (例如: 烏薩奇, 兔子)" class="a-alias" value="${alias}" onchange="saveCurrentGroupData()">
+      <input type="text" placeholder="對齊正式商品名稱" class="a-official" value="${official}" onchange="saveCurrentGroupData()">
+      <button class="btn-del" title="刪除" onclick="this.parentElement.remove(); saveCurrentGroupData();">✕</button>
+    `;
+    document.getElementById('aliasList').appendChild(div);
   }
 
   function onNameChange(elem) {
@@ -442,12 +402,13 @@
     saveCurrentGroupData();
   }
 
+  // 輸入日幣自動試算台幣 (按 0.24 匯率四捨五入，可手動修改)
   function calcRowTwd(inputElem) {
     const row = inputElem.parentElement;
     const jpy = parseFloat(inputElem.value) || 0;
     const rate = parseFloat(document.getElementById('exchangeRate').value) || 0.24;
     const twdInput = row.querySelector('.p-twd');
-    if (jpy > 0 && !twdInput.value) {
+    if (jpy > 0) {
       twdInput.value = Math.round(jpy * rate);
     }
     saveCurrentGroupData();
@@ -465,7 +426,7 @@
     saveCurrentGroupData();
   }
 
-  // 1. 解析喊單 (包含對照取消/追加/備註/三小隻自動拆解)
+  // 1. 解析喊單 (精準防誤抓與自動比對)
   function processOrders() {
     saveCurrentGroupData();
     const g = groupsData[currentGroupId];
@@ -475,28 +436,50 @@
       return;
     }
 
-    const products = g.products;
+    const products = g.products || [];
+    const aliases = g.aliases || [];
+    const globalLimit = isNaN(g.globalLimit) ? 1 : g.globalLimit;
+
+    // 建立別名字典
+    const aliasMap = {};
+    aliases.forEach(a => {
+      const list = a.alias.split(/[,，]/);
+      list.forEach(item => { if (item.trim()) aliasMap[item.trim()] = a.official; });
+    });
+
     const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    
     const buyerMap = {};
     const buyerOrder = [];
     let currentName = '';
-    const timePattern = /(\d+月\d+日|\d+小時前|昨天|前天|今天)?\s*(上午|下午)?\s*\d+:\d+/;
+
+    // 時間戳記與雜訊過濾正則
+    const timePattern = /^(\d+月\d+日|\d+小時前|昨天|前天|今天|\d+:\d+|\d+月\d+日\s*\d+:\d+)/;
+    const junkPattern = /^(可分境內運|可分運|追加|補充|取消|瓜張|平攤運費|謝謝|可分|8小時前|9月\d+日)/;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      if (timePattern.test(line)) continue;
 
-      // 檢查是否為備註語句 (例: 可自吃一單, 沒有S改M, 補充T-shirt尺寸)
-      if (line.includes('可自吃') || line.includes('改') || line.includes('若無') || line.includes('尺寸') || line.includes('補')) {
-        if (currentName && buyerMap[currentName]) {
+      // 過濾時間戳記與純雜訊行
+      if (timePattern.test(line) || junkPattern.test(line)) {
+        if (line.includes('可自吃') && currentName && buyerMap[currentName]) {
           buyerMap[currentName].notes = (buyerMap[currentName].notes ? buyerMap[currentName].notes + '；' : '') + line;
-          if (line.includes('可自吃')) buyerMap[currentName].canVip = true;
+          buyerMap[currentName].canVip = true;
         }
         continue;
       }
 
-      // 處理「取消」邏輯
+      // 尺寸與補充說明自動抓入「備註」
+      const sizeMatch = line.match(/(?:尺寸|號|號碼)?\s*(S|M|L|XL|2XL|3XL)/i);
+      let detectedSizeNote = '';
+      if (sizeMatch) detectedSizeNote = `尺寸:${sizeMatch[1].toUpperCase()}`;
+
+      if (line.includes('若無') || line.includes('改') || line.includes('尺寸') || line.includes('補充')) {
+        if (currentName && buyerMap[currentName]) {
+          buyerMap[currentName].notes = (buyerMap[currentName].notes ? buyerMap[currentName].notes + '；' : '') + line;
+        }
+      }
+
+      // 處理「取消」
       if (line.includes('取消')) {
         if (currentName && buyerMap[currentName]) {
           products.forEach(p => {
@@ -509,23 +492,23 @@
         continue;
       }
 
-      // 自動展開「三小隻」語法 (例: 三小隻吊飾各1 ➔ 拆為 吉伊, 小八, 兔兔)
-      let currentLineText = line;
-      let isThreeSet = false;
-      if (line.includes('三小隻') || line.includes('三隻') || line.includes('3隻')) {
-        isThreeSet = true;
-      }
-
+      // 檢查是否為商品喊單
       let matchedLine = false;
+      let isThreeSet = line.includes('三小隻') || line.includes('三隻') || line.includes('3隻');
 
       products.forEach(p => {
         let isMatch = line.includes(p.name) || p.name.includes(line.replace(/小娃|吊飾|娃|\(小\)|（小）|鑰匙圈|\s+/g, ''));
         
-        // 如果帶有三小隻關鍵字且商品屬於吉伊/小八/兔兔
+        // 別名比對
+        for (let aliasKey in aliasMap) {
+          if (line.includes(aliasKey) && aliasMap[aliasKey] === p.name) isMatch = true;
+        }
+
+        // 三小隻自動拆解
         if (isThreeSet && (p.name.includes('吉伊') || p.name.includes('小八') || p.name.includes('兔兔'))) {
           if (line.includes('磁鐵') && p.name.includes('磁鐵')) isMatch = true;
           else if (line.includes('貼紙') && p.name.includes('貼紙')) isMatch = true;
-          else if (!line.includes('磁鐵') && !line.includes('貼紙') && (p.name.includes('吊飾') || p.name.includes('娃'))) isMatch = true;
+          else if (!line.includes('磁鐵') && !line.includes('貼紙') && (p.name.includes('吊飾') || p.name.includes('娃') || p.name.includes('幽靈'))) isMatch = true;
         }
 
         if (isMatch) {
@@ -534,10 +517,20 @@
           const qtyMatch = line.match(/(?:\+|\*|x|X|\s*)(\d+)/);
           if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
 
-          const limitNum = parseInt(p.limit, 10) || 0;
-          if (limitNum > 0 && qty > limitNum) qty = limitNum;
+          // 判斷限購 (優先使用單品限購，無則套用全團預設)
+          const singleLimit = p.limit !== '' ? (parseInt(p.limit, 10) || 0) : globalLimit;
+          if (singleLimit > 0 && qty > singleLimit) qty = singleLimit;
 
-          if (!currentName && i > 0) currentName = lines[i - 1];
+          // 確定買家名字（往前尋找非喊單且不含雜訊的短名字）
+          if (!currentName && i > 0) {
+            for (let j = i - 1; j >= 0; j--) {
+              const prev = lines[j];
+              if (!timePattern.test(prev) && !junkPattern.test(prev) && prev.length < 15 && !prev.includes('+') && !prev.includes('*')) {
+                currentName = prev;
+                break;
+              }
+            }
+          }
 
           if (currentName) {
             if (!buyerMap[currentName]) {
@@ -545,14 +538,18 @@
               buyerOrder.push(currentName);
             }
             buyerMap[currentName].items[p.name] = (buyerMap[currentName].items[p.name] || 0) + qty;
-            if (limitNum > 0 && buyerMap[currentName].items[p.name] > limitNum) {
-              buyerMap[currentName].items[p.name] = limitNum;
+            if (singleLimit > 0 && buyerMap[currentName].items[p.name] > singleLimit) {
+              buyerMap[currentName].items[p.name] = singleLimit;
+            }
+            if (detectedSizeNote && !buyerMap[currentName].notes.includes(detectedSizeNote)) {
+              buyerMap[currentName].notes = (buyerMap[currentName].notes ? buyerMap[currentName].notes + '；' : '') + detectedSizeNote;
             }
           }
         }
       });
 
-      if (!matchedLine && !timePattern.test(line) && line.length < 20) {
+      // 若該行非喊單，且字數短、不含時間雜訊，則設定為潛在買家名字
+      if (!matchedLine && !timePattern.test(line) && !junkPattern.test(line) && line.length < 15 && !line.includes('+') && !line.includes('*')) {
         currentName = line;
       }
     }
@@ -567,10 +564,10 @@
 
     saveAllToStorage();
     renderPreview();
-    alert(`解析成功！共抓取 ${g.buyers.length} 位買家名單（含取消/追加/尺寸備註）！`);
+    alert(`解析成功！共抓取 ${g.buyers.length} 位買家名單！`);
   }
 
-  // 2. 智慧整理排序 (可自吃一車排在最前面)
+  // 2. 智慧整理排序 (可自吃一車排最前)
   function sortOrders() {
     const g = groupsData[currentGroupId];
     if (!g.buyers || g.buyers.length === 0) {
@@ -579,10 +576,8 @@
     }
 
     g.buyers.sort((a, b) => {
-      // 1. 可自吃一單/一車優先排最前面
       if (a.canVip !== b.canVip) return b.canVip ? 1 : -1;
 
-      // 2. 依品項數量多寡排序
       const aKeys = Object.keys(a.items);
       const bKeys = Object.keys(b.items);
       const aTypes = aKeys.length;
