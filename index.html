@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>芊芊代購 - 智慧團務整理系統 (支援截圖辨識)</title>
+  <title>芊芊代購 - 智慧團務整理系統 (別名對照 & 精準計價版)</title>
   <!-- 載入 SheetJS (Excel匯出) 與 Tesseract.js (圖片OCR辨識) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -23,7 +23,7 @@
       padding: 20px;
     }
     .container {
-      max-width: 1000px;
+      max-width: 1050px;
       margin: 0 auto;
       background: var(--card-bg);
       padding: 25px;
@@ -67,12 +67,15 @@
       height: 120px;
       resize: vertical;
     }
-    .product-row {
+    .product-row, .alias-row {
       display: grid;
       grid-template-columns: 2fr 1fr 1fr 1fr 40px;
       gap: 10px;
       margin-bottom: 10px;
       align-items: center;
+    }
+    .alias-row {
+      grid-template-columns: 2fr 2fr 40px;
     }
     .btn {
       background-color: var(--primary-color);
@@ -105,6 +108,9 @@
       padding: 8px;
       border-radius: 50%;
       line-height: 1;
+      color: white;
+      border: none;
+      cursor: pointer;
     }
     .btn-del:hover {
       background-color: #c62828;
@@ -112,7 +118,7 @@
     .upload-area {
       border: 2px dashed var(--primary-color);
       border-radius: 8px;
-      padding: 20px;
+      padding: 15px;
       text-align: center;
       background: #fff5f8;
       cursor: pointer;
@@ -164,6 +170,14 @@
       border-radius: 4px;
       font-weight: bold;
     }
+    .tip-box {
+      background-color: #e1f5fe;
+      border-left: 4px solid #0288d1;
+      padding: 10px 15px;
+      font-size: 0.88rem;
+      margin-bottom: 15px;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
@@ -172,7 +186,7 @@
   <h1>芊芊代購 - 智慧代購整理軟體</h1>
 
   <!-- 步驟 1：開團設定 -->
-  <div class="section-title">步驟 1：開團基本設定與商品清單</div>
+  <div class="section-title">步驟 1：開團基本設定與正式商品</div>
   <div class="grid-2">
     <div>
       <label>開團名稱 (例如：0928平行受注團)</label>
@@ -185,24 +199,30 @@
   </div>
 
   <div style="margin-top: 15px;">
-    <label>商品清單 (名稱 / 日幣 / 台幣定價 / 實際買到數［採購完再填］)</label>
-    <div id="productList">
-      <!-- 動態增減商品 -->
-    </div>
-    <button class="btn btn-secondary" onclick="addProductRow()" style="margin-top: 5px;">+ 新增商品</button>
+    <label>正式商品清單 (名稱 / 日幣 / 台幣定價 / 實際買到數［採購完再填］)</label>
+    <div id="productList"></div>
+    <button class="btn btn-secondary" onclick="addProductRow()" style="margin-top: 5px;">+ 新增正式商品</button>
   </div>
 
-  <!-- 步驟 2：上傳截圖 OR 貼文字 -->
-  <div class="section-title">步驟 2：匯入喊單 (上傳 LINE 記事本截圖 或 貼上文字)</div>
+  <!-- 同義詞 / 別名設定 -->
+  <div class="section-title">自動對照設定 (客人俗稱 ➔ 正式品名)</div>
+  <div class="tip-box">
+    💡 <b>說明：</b> 當客人喊單寫「小娃」或「吊飾」時，只要在下方設定對照，系統就會自動對齊為正式商品「平行世界小八」，價格就會自動精算！多個俗稱請用逗號對開。
+  </div>
+  <div id="aliasList"></div>
+  <button class="btn btn-secondary" onclick="addAliasRow()" style="margin-top: 5px;">+ 新增俗稱對照</button>
+
+  <!-- 步驟 2：匯入喊單 -->
+  <div class="section-title">步驟 2：匯入喊單文字 (推薦複製 LINE 記事本貼上)</div>
   
   <div class="upload-area" onclick="document.getElementById('imageInput').click()">
-    📸 <b>點擊或拖曳上傳 LINE 記事本截圖</b>
+    📸 <b>點擊上傳截圖辨識 (備用)</b>
     <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
     <div id="ocrStatus"></div>
   </div>
 
-  <label>或直接貼上對話文字：</label>
-  <textarea id="rawLineText" placeholder="上傳截圖後辨識出的文字會出現在這裡，也可以手動調整..."></textarea>
+  <label>複製 LINE 記事本內容貼在下方：</label>
+  <textarea id="rawLineText" placeholder="請直接貼上 LINE 記事本對話內容..."></textarea>
   
   <div class="actions">
     <button class="btn" onclick="processOrders()">1. 解析留言並匯入</button>
@@ -261,24 +281,41 @@
     { name: '平行世界吉伊', jpy: 1650, twd: 400, bought: '' }
   ];
 
+  let defaultAliases = [
+    { aliases: '小娃, 吊飾, 小八小娃, 小八吊飾', official: '平行世界小八' },
+    { aliases: '吉伊小娃, 吉伊吊飾', official: '平行世界吉伊' }
+  ];
+
   let parsedBuyers = [];
   let calculatedResults = [];
 
   window.onload = function() {
     defaultProducts.forEach(p => addProductRow(p.name, p.jpy, p.twd, p.bought));
+    defaultAliases.forEach(a => addAliasRow(a.aliases, a.official));
   };
 
   function addProductRow(name = '', jpy = '', twd = '', bought = '') {
     const div = document.createElement('div');
     div.className = 'product-row';
     div.innerHTML = `
-      <input type="text" placeholder="商品名稱" class="p-name" value="${name}">
+      <input type="text" placeholder="正式商品名稱" class="p-name" value="${name}">
       <input type="number" placeholder="日幣" class="p-jpy" value="${jpy}">
       <input type="number" placeholder="台幣定價" class="p-twd" value="${twd}">
-      <input type="number" placeholder="實際買到數(採購後填)" class="p-bought" value="${bought}">
-      <button class="btn btn-del" onclick="this.parentElement.remove()">✕</button>
+      <input type="number" placeholder="實際買到數" class="p-bought" value="${bought}">
+      <button class="btn-del" onclick="this.parentElement.remove()">✕</button>
     `;
     document.getElementById('productList').appendChild(div);
+  }
+
+  function addAliasRow(aliases = '', official = '') {
+    const div = document.createElement('div');
+    div.className = 'alias-row';
+    div.innerHTML = `
+      <input type="text" placeholder="客人寫的俗稱 (例如: 小娃, 吊飾)" class="a-alias" value="${aliases}">
+      <input type="text" placeholder="自動轉為正式品名" class="a-official" value="${official}">
+      <button class="btn-del" onclick="this.parentElement.remove()">✕</button>
+    `;
+    document.getElementById('aliasList').appendChild(div);
   }
 
   function getProducts() {
@@ -297,7 +334,23 @@
     return products;
   }
 
-  // 圖片上傳辨識 (OCR)
+  function getAliasMap() {
+    const rows = document.querySelectorAll('.alias-row');
+    const aliasMap = {};
+    rows.forEach(r => {
+      const aliasesStr = r.querySelector('.a-alias').value.trim();
+      const official = r.querySelector('.a-official').value.trim();
+      if (aliasesStr && official) {
+        const list = aliasesStr.split(/[,，]/);
+        list.forEach(a => {
+          if (a.trim()) aliasMap[a.trim()] = official;
+        });
+      }
+    });
+    return aliasMap;
+  }
+
+  // 圖片 OCR 辨識
   async function handleImageUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -311,23 +364,26 @@
       await worker.terminate();
 
       document.getElementById('rawLineText').value = ret.data.text;
-      statusDiv.innerText = '✅ 圖片文字辨識完成！請確認上方框內文字後點擊「解析留言並匯入」。';
+      statusDiv.innerText = '✅ 圖片文字辨識完成！請確認下方文字後點擊「解析留言並匯入」。';
     } catch (err) {
       statusDiv.innerText = '❌ 辨識失敗，請改用貼上文字方式。';
       console.error(err);
     }
   }
 
-  // 1. 解析喊單
+  // 1. 解析喊單 (包含別名對照與計價)
   function processOrders() {
     const rawText = document.getElementById('rawLineText').value;
     if (!rawText.trim()) {
-      alert('請先上傳圖片或貼上 LINE 喊單對話！');
+      alert('請先貼上 LINE 喊單對話！');
       return;
     }
 
     const limitQty = parseInt(document.getElementById('limitQty').value, 10) || 0;
+    const aliasMap = getAliasMap();
+    const products = getProducts();
     const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    
     const buyerMap = {};
     const buyerOrder = [];
     let currentName = '';
@@ -339,8 +395,20 @@
 
       const orderMatch = line.match(/(.+?)(?:\+|\*|x|X|\s+)(\d+)$/);
       if (orderMatch) {
-        let item = orderMatch[1].trim();
+        let rawItem = orderMatch[1].trim();
         let qty = parseInt(orderMatch[2], 10);
+
+        // 別名自動轉換成正式名稱
+        let officialItem = aliasMap[rawItem] || rawItem;
+
+        // 若無對照但匹配包含正式名稱
+        if (!aliasMap[rawItem]) {
+          products.forEach(p => {
+            if (rawItem.includes(p.name) || p.name.includes(rawItem)) {
+              officialItem = p.name;
+            }
+          });
+        }
 
         if (limitQty > 0 && qty > limitQty) qty = limitQty;
 
@@ -351,9 +419,9 @@
             buyerMap[currentName] = { items: {} };
             buyerOrder.push(currentName);
           }
-          buyerMap[currentName].items[item] = (buyerMap[currentName].items[item] || 0) + qty;
-          if (limitQty > 0 && buyerMap[currentName].items[item] > limitQty) {
-            buyerMap[currentName].items[item] = limitQty;
+          buyerMap[currentName].items[officialItem] = (buyerMap[currentName].items[officialItem] || 0) + qty;
+          if (limitQty > 0 && buyerMap[currentName].items[officialItem] > limitQty) {
+            buyerMap[currentName].items[officialItem] = limitQty;
           }
         }
       } else {
@@ -424,7 +492,7 @@
         }
       });
 
-      let trHtml = `<td><b>${b.name}</b></td><td>${itemText.join('+')}</td><td>${totalTwd}</td><td>${totalJpy}</td>`;
+      let trHtml = `<td><b>${b.name}</b></td><td>${itemText.join('+')}</td><td><b>$${totalTwd}</b></td><td>¥${totalJpy}</td>`;
       products.forEach(p => {
         trHtml += `<td>${b.items[p.name] || ''}</td>`;
       });
