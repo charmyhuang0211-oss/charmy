@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>芊芊代購 - 智慧團務整理系統 (支援 Excel 匯入二階段分配)</title>
+  <title>芊芊代購 - 智慧團務整理系統 (雙層限購版)</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
@@ -67,7 +67,7 @@
     }
     .product-row {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr 1fr 40px;
+      grid-template-columns: 2fr 1fr 1fr 1.2fr 1.2fr 40px;
       gap: 10px;
       margin-bottom: 10px;
       align-items: center;
@@ -154,14 +154,6 @@
       border-radius: 4px;
       font-weight: bold;
     }
-    .tip-box {
-      background-color: #e1f5fe;
-      border-left: 4px solid #0288d1;
-      padding: 10px 15px;
-      font-size: 0.88rem;
-      margin-bottom: 15px;
-      border-radius: 4px;
-    }
     .import-box {
       background-color: #f3e5f5;
       border: 2px dashed #ab47bc;
@@ -184,16 +176,20 @@
   </div>
 
   <!-- 步驟 1：開團設定 -->
-  <div class="section-title">步驟 1：開團基本設定與商品 (可設定單品獨立限購)</div>
+  <div class="section-title">步驟 1：開團基本設定與商品 (支援預設限購 + 單品特例調整)</div>
   <div class="grid-2">
     <div>
       <label>開團名稱 (例如：0928平行受注團)</label>
       <input type="text" id="groupName" value="0928平行受注團">
     </div>
+    <div>
+      <label>全團預設限購數量 (若商品未獨立設定，則以此為準；填 0 代表不限購)</label>
+      <input type="number" id="globalLimitQty" value="1" min="0">
+    </div>
   </div>
 
   <div style="margin-top: 15px;">
-    <label>商品清單 (名稱 / 日幣 / 台幣 / 限購上限 / 實際買到數)</label>
+    <label>商品清單 (名稱 / 日幣 / 台幣 / 個別特例限購 / 實際買到數)</label>
     <div id="productList"></div>
     <button class="btn btn-secondary" onclick="addProductRow()" style="margin-top: 5px;">+ 新增正式商品</button>
   </div>
@@ -256,8 +252,8 @@
 
 <script>
   let defaultProducts = [
-    { name: '平行世界小八', jpy: 1650, twd: 400, limit: 1, bought: '' },
-    { name: '平行世界吉伊', jpy: 1650, twd: 400, limit: 1, bought: '' }
+    { name: '平行世界小八', jpy: 1650, twd: 400, limit: '', bought: '' },
+    { name: '平行世界吉伊', jpy: 1650, twd: 400, limit: '', bought: '' }
   ];
 
   let parsedBuyers = [];
@@ -274,7 +270,7 @@
       <input type="text" placeholder="正式商品名稱" class="p-name" value="${name}">
       <input type="number" placeholder="日幣" class="p-jpy" value="${jpy}">
       <input type="number" placeholder="台幣定價" class="p-twd" value="${twd}">
-      <input type="number" placeholder="限購上限(無填0)" class="p-limit" value="${limit}">
+      <input type="number" placeholder="獨立限購(留空用全團)" class="p-limit" value="${limit}">
       <input type="number" placeholder="實際買到數" class="p-bought" value="${bought}">
       <button class="btn-del" onclick="this.parentElement.remove()">✕</button>
     `;
@@ -282,13 +278,20 @@
   }
 
   function getProducts() {
+    const globalLimit = parseInt(document.getElementById('globalLimitQty').value, 10);
+    const defaultLimit = isNaN(globalLimit) ? 0 : globalLimit;
+
     const rows = document.querySelectorAll('.product-row');
     const products = [];
     rows.forEach(r => {
       const name = r.querySelector('.p-name').value.trim();
       const jpy = parseFloat(r.querySelector('.p-jpy').value) || 0;
       const twd = parseFloat(r.querySelector('.p-twd').value) || 0;
-      const limit = parseInt(r.querySelector('.p-limit').value, 10) || 0;
+      
+      const limitVal = r.querySelector('.p-limit').value.trim();
+      // 若獨立欄位有填寫，使用獨立填寫值；若留空，則套用全團預設值
+      const limit = limitVal !== '' ? (parseInt(limitVal, 10) || 0) : defaultLimit;
+
       const boughtVal = r.querySelector('.p-bought').value;
       const bought = boughtVal === '' ? 9999 : parseInt(boughtVal, 10);
       if (name) {
@@ -298,7 +301,7 @@
     return products;
   }
 
-  // 1. 解析喊單 (包含多品項連寫與獨立限購)
+  // 1. 解析喊單
   function processOrders() {
     const rawText = document.getElementById('rawLineText').value;
     if (!rawText.trim()) {
@@ -320,9 +323,7 @@
 
       let matchedLine = false;
 
-      // 自動比對品項
       products.forEach(p => {
-        // 匹配商品名稱及數量 (+1, *1, 1 或僅出現商品名)
         if (line.includes(p.name) || p.name.includes(line.replace(/小娃|吊飾|娃|\(小\)|（小）|\s+/g, ''))) {
           matchedLine = true;
           let qty = 1;
@@ -358,7 +359,7 @@
     }));
 
     renderPreview();
-    alert(`解析成功！共抓取 ${parsedBuyers.length} 位買家名單（已辨識包含 rei 等連寫格式）！`);
+    alert(`解析成功！共抓取 ${parsedBuyers.length} 位買家名單！`);
   }
 
   // 2. 智慧整理排序
@@ -491,17 +492,15 @@
         return;
       }
 
-      // 解析商品 (Row 2, 3, 4)
       const pNames = json[1].slice(1);
       const pJpys = json[2].slice(1);
       const pTwds = json[3].slice(1);
 
       document.getElementById('productList').innerHTML = '';
       pNames.forEach((name, idx) => {
-        if (name) addProductRow(name, pJpys[idx] || 0, pTwds[idx] || 0, 0, '');
+        if (name) addProductRow(name, pJpys[idx] || 0, pTwds[idx] || 0, '', '');
       });
 
-      // 解析買家名單 (Row 8+)
       parsedBuyers = [];
       for (let r = 7; r < json.length; r++) {
         const row = json[r];
