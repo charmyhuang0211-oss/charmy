@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>芊芊代購 - 智慧團務整理系統</title>
+  <title>芊芊代購 - 智慧團務整理系統 (圖片自動建品項版)</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
     :root {
       --primary-color: #f06292;
@@ -154,6 +155,23 @@
       border-radius: 4px;
       font-weight: bold;
     }
+    .upload-area {
+      border: 2px dashed var(--primary-color);
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      background: #fff5f8;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+    .upload-area:hover {
+      background: #ffe0b2;
+    }
+    #pOcrStatus {
+      font-weight: bold;
+      color: #d81b60;
+      margin-top: 5px;
+    }
     .import-box {
       background-color: #f3e5f5;
       border: 2px dashed #ab47bc;
@@ -176,22 +194,29 @@
   </div>
 
   <!-- 步驟 1：開團設定 -->
-  <div class="section-title">步驟 1：開團基本設定與商品</div>
+  <div class="section-title">步驟 1：開團基本設定與商品建檔</div>
   <div class="grid-2">
     <div>
       <label>開團名稱 (例如：0928平行受注團)</label>
       <input type="text" id="groupName" value="0928平行受注團">
     </div>
     <div>
-      <label>全團預設限購數量 (填 0 代表不限購)</label>
-      <input type="number" id="globalLimitQty" value="1" min="0">
+      <label>計算匯率 (日幣 × 匯率 ＝ 台幣定價)</label>
+      <input type="number" id="exchangeRate" value="0.24" step="0.001">
     </div>
   </div>
 
   <div style="margin-top: 15px;">
+    <!-- 新增：官網截圖辨識建品項 -->
+    <div class="upload-area" onclick="document.getElementById('productImgInput').click()">
+      📸 <b>點擊上傳官網宣傳圖 / 價格截圖（自動辨識品名、日幣並計算台幣定價）</b>
+      <input type="file" id="productImgInput" accept="image/*" style="display:none" onchange="handleProductImageUpload(event)">
+      <div id="pOcrStatus"></div>
+    </div>
+
     <label>商品清單 (名稱 / 日幣 / 台幣 / 個別特例限購 / 實際買到數)</label>
     <div id="productList"></div>
-    <button class="btn btn-secondary" onclick="addProductRow()" style="margin-top: 5px;">+ 新增正式商品</button>
+    <button class="btn btn-secondary" onclick="addProductRow()" style="margin-top: 5px;">+ 新增空白商品</button>
   </div>
 
   <!-- 步驟 2：匯入喊單 -->
@@ -268,29 +293,80 @@
     div.className = 'product-row';
     div.innerHTML = `
       <input type="text" placeholder="正式商品名稱" class="p-name" value="${name}">
-      <input type="number" placeholder="日幣" class="p-jpy" value="${jpy}">
+      <input type="number" placeholder="日幣" class="p-jpy" value="${jpy}" onchange="calcRowTwd(this)">
       <input type="number" placeholder="台幣定價" class="p-twd" value="${twd}">
-      <input type="number" placeholder="獨立限購(留空用全團)" class="p-limit" value="${limit}">
+      <input type="number" placeholder="限購上限(無不填)" class="p-limit" value="${limit}">
       <input type="number" placeholder="實際買到數" class="p-bought" value="${bought}">
       <button class="btn-del" onclick="this.parentElement.remove()">✕</button>
     `;
     document.getElementById('productList').appendChild(div);
   }
 
-  function getProducts() {
-    const globalLimit = parseInt(document.getElementById('globalLimitQty').value, 10);
-    const defaultLimit = isNaN(globalLimit) ? 0 : globalLimit;
+  // 自動依匯率算定台幣定價 (五捨六入/四捨五入)
+  function calcRowTwd(inputElem) {
+    const row = inputElem.parentElement;
+    const jpy = parseFloat(inputElem.value) || 0;
+    const rate = parseFloat(document.getElementById('exchangeRate').value) || 0.24;
+    const twdInput = row.querySelector('.p-twd');
+    if (jpy > 0 && !twdInput.value) {
+      twdInput.value = Math.round(jpy * rate);
+    }
+  }
 
+  // 官網圖片 OCR 建檔功能
+  async function handleProductImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const statusDiv = document.getElementById('pOcrStatus');
+    statusDiv.innerText = '⏳ 正在讀取官網圖片並辨識商品與價格，請稍候...';
+
+    try {
+      const worker = await Tesseract.createWorker('chi_tra+eng');
+      const ret = await worker.recognize(file);
+      await worker.terminate();
+
+      const text = ret.data.text;
+      const rate = parseFloat(document.getElementById('exchangeRate').value) || 0.24;
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+      let foundCount = 0;
+      let tempName = '';
+
+      lines.forEach(line => {
+        // 抓取日幣價格格式 (例: ¥1,540 或 2420)
+        const priceMatch = line.match(/(?:¥|￥)?\s*([1-9],?\d{3}|[1-9]\d{2})/);
+        if (priceMatch) {
+          const jpy = parseInt(priceMatch[1].replace(',', ''), 10);
+          const twd = Math.round(jpy * rate);
+          const finalName = tempName || '新辨識商品';
+          addProductRow(finalName, jpy, twd, '', '');
+          foundCount++;
+          tempName = '';
+        } else {
+          // 若不是價格，當作品名備選
+          if (line.length > 2 && line.length < 30 && !line.includes('含稅') && !line.includes('開售前')) {
+            tempName = line.replace(/吉伊卡哇\s*/g, '').trim();
+          }
+        }
+      });
+
+      statusDiv.innerText = `✅ 辨識完成！共自動建立 ${foundCount} 項商品，請在下方檢查或微調名稱！`;
+    } catch (err) {
+      statusDiv.innerText = '❌ 辨識失敗，請改用手動新增商品。';
+      console.error(err);
+    }
+  }
+
+  function getProducts() {
     const rows = document.querySelectorAll('.product-row');
     const products = [];
     rows.forEach(r => {
       const name = r.querySelector('.p-name').value.trim();
       const jpy = parseFloat(r.querySelector('.p-jpy').value) || 0;
       const twd = parseFloat(r.querySelector('.p-twd').value) || 0;
-      
       const limitVal = r.querySelector('.p-limit').value.trim();
-      const limit = limitVal !== '' ? (parseInt(limitVal, 10) || 0) : defaultLimit;
-
+      const limit = limitVal !== '' ? (parseInt(limitVal, 10) || 0) : 0;
       const boughtVal = r.querySelector('.p-bought').value;
       const bought = boughtVal === '' ? 9999 : parseInt(boughtVal, 10);
       if (name) {
@@ -528,7 +604,6 @@
     }
   }
 
-  // 匯出『開團登記表』 Excel (已精簡移除右側各商品欄位)
   function exportGroupExcel() {
     if (parsedBuyers.length === 0) {
       alert('請先匯入喊單資料！');
@@ -541,22 +616,18 @@
     const sheetData = [];
     sheetData.push([]); // Row 1
 
-    // Row 2: 品名
     const row2 = ['品名'];
     products.forEach(p => row2.push(p.name));
     sheetData.push(row2);
 
-    // Row 3: 日幣
     const row3 = ['日幣'];
     products.forEach(p => row3.push(p.jpy));
     sheetData.push(row3);
 
-    // Row 4: 定價(未二補)
     const row4 = ['定價(未二補)'];
     products.forEach(p => row4.push(p.twd));
     sheetData.push(row4);
 
-    // Row 5: 總數
     const row5 = ['總數'];
     products.forEach(p => {
       let sum = 0;
@@ -567,11 +638,9 @@
 
     sheetData.push([]); // Row 6
 
-    // Row 7: 表頭 (僅保留前 5 欄)
     const row7 = ['名字', '品項', '價格', '日幣', '備註'];
     sheetData.push(row7);
 
-    // Row 8+: 買家資料
     parsedBuyers.forEach(b => {
       let itemStrParts = [];
       let totalTwd = 0;
