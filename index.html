@@ -115,7 +115,7 @@
       </div>
 
       <div style="margin-top: 15px;">
-        <label>商品清單 (輸入日幣會自動試算台幣，也可手動修改台幣與獨立限購)</label>
+        <label>商品清單 (設定「限購」可強制將 *2 扣回限購數量，自動試算台幣與金額)</label>
         <div id="productList"></div>
         <datalist id="historyProductList"></datalist>
         <div class="actions">
@@ -211,25 +211,23 @@
       rate: 0.24,
       globalLimit: 1,
       products: [
-        { name: '南瓜兔兔', jpy: 2420, twd: 581, limit: '', bought: '' },
-        { name: '幽靈吉伊', jpy: 1540, twd: 370, limit: '', bought: '' },
-        { name: '幽靈小八', jpy: 1540, twd: 370, limit: '', bought: '' },
-        { name: '幽靈兔兔', jpy: 1540, twd: 370, limit: '', bought: '' },
-        { name: '夜光壓克力鑰匙圈', jpy: 1540, twd: 370, limit: '', bought: '' },
-        { name: '吉伊磁鐵', jpy: 770, twd: 185, limit: '', bought: '' },
-        { name: '兔兔磁鐵', jpy: 770, twd: 185, limit: '', bought: '' },
-        { name: '小八磁鐵', jpy: 770, twd: 185, limit: '', bought: '' },
-        { name: '吉伊貼紙', jpy: 330, twd: 80, limit: '', bought: '' },
-        { name: '小八貼紙', jpy: 330, twd: 80, limit: '', bought: '' },
-        { name: '兔兔貼紙', jpy: 330, twd: 80, limit: '', bought: '' },
-        { name: '夜光踢恤', jpy: 4180, twd: 1003, limit: '', bought: '' },
-        { name: '吉伊束口包', jpy: 2310, twd: 555, limit: '', bought: '' },
-        { name: '兔兔束口包', jpy: 2310, twd: 555, limit: '', bought: '' },
-        { name: '小八束口包', jpy: 2310, twd: 555, limit: '', bought: '' },
-        { name: '幽靈環保袋', jpy: 2090, twd: 502, limit: '', bought: '' },
-        { name: '南瓜兔兔衣服', jpy: 4180, twd: 1003, limit: '', bought: '' },
-        { name: '南瓜兔兔包', jpy: 3630, twd: 871, limit: '', bought: '' },
-        { name: '幽靈黑色托特包', jpy: 3630, twd: 871, limit: '', bought: '' }
+        { name: '南瓜兔兔', jpy: 2420, twd: 581, limit: 1, bought: '' },
+        { name: '幽靈吉伊', jpy: 1540, twd: 370, limit: 1, bought: '' },
+        { name: '幽靈小八', jpy: 1540, twd: 370, limit: 1, bought: '' },
+        { name: '幽靈兔兔', jpy: 1540, twd: 370, limit: 1, bought: '' },
+        { name: '夜光壓克力鑰匙圈', jpy: 1540, twd: 370, limit: 1, bought: '' },
+        { name: '吉伊磁鐵', jpy: 770, twd: 185, limit: 1, bought: '' },
+        { name: '兔兔磁鐵', jpy: 770, twd: 185, limit: 1, bought: '' },
+        { name: '小八磁鐵', jpy: 770, twd: 185, limit: 1, bought: '' },
+        { name: '吉伊貼紙', jpy: 330, twd: 80, limit: 1, bought: '' },
+        { name: '小八貼紙', jpy: 330, twd: 80, limit: 1, bought: '' },
+        { name: '兔兔貼紙', jpy: 330, twd: 80, limit: 1, bought: '' },
+        { name: '夜光踢恤', jpy: 4180, twd: 1003, limit: 1, bought: '' },
+        { name: '吉伊束口包', jpy: 2310, twd: 555, limit: 1, bought: '' },
+        { name: '兔兔束口包', jpy: 2310, twd: 555, limit: 1, bought: '' },
+        { name: '小八束口包', jpy: 2310, twd: 555, limit: 1, bought: '' },
+        { name: '幽靈環保袋', jpy: 2090, twd: 502, limit: 1, bought: '' },
+        { name: '南瓜兔兔衣服', jpy: 4180, twd: 1003, limit: 1, bought: '' }
       ],
       rawText: '',
       buyers: []
@@ -452,7 +450,6 @@
 
       if (timePattern.test(line)) continue;
 
-      // 自吃一單標記
       if (line.includes('可自吃')) {
         if (currentBuyerObj) {
           const subNote = line.replace(/可自吃一單,?/g, '').trim();
@@ -462,7 +459,6 @@
         continue;
       }
 
-      // 特殊替換備註 (例如：若無L改M、沒有S改M)
       if (line.includes('若無') || line.includes('改') || line.includes('沒有')) {
         if (currentBuyerObj) {
           currentBuyerObj.notes = (currentBuyerObj.notes ? currentBuyerObj.notes + '；' : '') + line;
@@ -470,7 +466,6 @@
         continue;
       }
 
-      // 取消指令
       if (line.includes('取消')) {
         if (currentBuyerObj) {
           products.forEach(p => {
@@ -494,10 +489,10 @@
           const qtyMatch = line.match(/(?:\+|\*|x|X|\s*)(\d+)/);
           if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
 
+          // 嚴格執行限購數管制：若設限購1，喊2個會自動被壓回1個
           const singleLimit = p.limit !== '' ? (parseInt(p.limit, 10) || 0) : globalLimit;
           if (singleLimit > 0 && qty > singleLimit) qty = singleLimit;
 
-          // 抓取尺寸並直接接在商品名稱後面（例如：南瓜兔兔衣服 XL）
           const sizeMatch = line.match(/(?:尺寸|號)?\s*(S|M|L|XL|2XL|3XL)/i);
           let finalItemName = p.name;
           if (sizeMatch) {
@@ -576,7 +571,6 @@
         const q = b.items[k];
         itemText.push(q > 1 ? `${k}*${q}` : k);
 
-        // 找尋對應單價（兼顧帶尺寸的品項）
         const baseName = k.split(' ')[0];
         const pInfo = products.find(p => p.name === baseName || p.name === k);
         if (pInfo) {
