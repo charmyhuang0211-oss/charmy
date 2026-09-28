@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>芊芊代購 - 智慧團務整理系統 (雙層限購版)</title>
+  <title>芊芊代購 - 智慧團務整理系統</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
@@ -176,14 +176,14 @@
   </div>
 
   <!-- 步驟 1：開團設定 -->
-  <div class="section-title">步驟 1：開團基本設定與商品 (支援預設限購 + 單品特例調整)</div>
+  <div class="section-title">步驟 1：開團基本設定與商品</div>
   <div class="grid-2">
     <div>
       <label>開團名稱 (例如：0928平行受注團)</label>
       <input type="text" id="groupName" value="0928平行受注團">
     </div>
     <div>
-      <label>全團預設限購數量 (若商品未獨立設定，則以此為準；填 0 代表不限購)</label>
+      <label>全團預設限購數量 (填 0 代表不限購)</label>
       <input type="number" id="globalLimitQty" value="1" min="0">
     </div>
   </div>
@@ -289,7 +289,6 @@
       const twd = parseFloat(r.querySelector('.p-twd').value) || 0;
       
       const limitVal = r.querySelector('.p-limit').value.trim();
-      // 若獨立欄位有填寫，使用獨立填寫值；若留空，則套用全團預設值
       const limit = limitVal !== '' ? (parseInt(limitVal, 10) || 0) : defaultLimit;
 
       const boughtVal = r.querySelector('.p-bought').value;
@@ -301,7 +300,6 @@
     return products;
   }
 
-  // 1. 解析喊單
   function processOrders() {
     const rawText = document.getElementById('rawLineText').value;
     if (!rawText.trim()) {
@@ -362,7 +360,6 @@
     alert(`解析成功！共抓取 ${parsedBuyers.length} 位買家名單！`);
   }
 
-  // 2. 智慧整理排序
   function sortOrders() {
     if (parsedBuyers.length === 0) {
       alert('無資料可排序！');
@@ -419,7 +416,6 @@
     });
   }
 
-  // 3. 生成買到名單
   function calculateFinalResults() {
     const products = getProducts();
     const stockMap = {};
@@ -475,7 +471,6 @@
     alert('買到名單分配計算完成！');
   }
 
-  // 匯入 Excel 檔案還原名單
   function importExcelFile(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -521,7 +516,6 @@
     reader.readAsArrayBuffer(file);
   }
 
-  // 一鍵清除內容
   function clearAllData() {
     if (confirm('確定要清空所有內容嗎？')) {
       document.getElementById('rawLineText').value = '';
@@ -534,7 +528,7 @@
     }
   }
 
-  // 匯出舊版格式『開團登記表』 Excel
+  // 匯出『開團登記表』 Excel (已精簡移除右側各商品欄位)
   function exportGroupExcel() {
     if (parsedBuyers.length === 0) {
       alert('請先匯入喊單資料！');
@@ -573,9 +567,8 @@
 
     sheetData.push([]); // Row 6
 
-    // Row 7: 表頭
+    // Row 7: 表頭 (僅保留前 5 欄)
     const row7 = ['名字', '品項', '價格', '日幣', '備註'];
-    products.forEach(p => row7.push(p.name));
     sheetData.push(row7);
 
     // Row 8+: 買家資料
@@ -595,7 +588,6 @@
       });
 
       const row = [b.name, itemStrParts.join('+'), totalTwd, totalJpy, ''];
-      products.forEach(p => row.push(b.items[p.name] || ''));
       sheetData.push(row);
     });
 
@@ -605,7 +597,6 @@
     XLSX.writeFile(wb, `${groupName}_開團登記表.xlsx`);
   }
 
-  // 匯出『買到名單』 Excel
   function exportFinalExcel() {
     if (calculatedResults.length === 0) {
       alert('請先點擊「3. 生成買到名單」！');
