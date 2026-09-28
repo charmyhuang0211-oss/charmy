@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>芊芊代購 - 智慧團務整理系統 (模糊比對修正版)</title>
-  <!-- 載入 SheetJS (Excel匯出) 與 Tesseract.js (圖片OCR辨識) -->
+  <title>芊芊代購 - 智慧團務整理系統 (一鍵清除與防漏版)</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
@@ -103,6 +102,12 @@
     .btn-success:hover {
       background-color: #1b5e20;
     }
+    .btn-reset {
+      background-color: #ff9800;
+    }
+    .btn-reset:hover {
+      background-color: #f57c00;
+    }
     .btn-del {
       background-color: #ef5350;
       padding: 8px;
@@ -178,6 +183,15 @@
       margin-bottom: 15px;
       border-radius: 4px;
     }
+    .warn-box {
+      background-color: #fff3e0;
+      border-left: 4px solid #ff9800;
+      padding: 10px 15px;
+      font-size: 0.88rem;
+      margin-top: 10px;
+      border-radius: 4px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -205,9 +219,9 @@
   </div>
 
   <!-- 同義詞 / 別名設定 -->
-  <div class="section-title">自訂俗稱對照 (非必填，系統已有智慧比對)</div>
+  <div class="section-title">自訂俗稱對照 (非必填)</div>
   <div class="tip-box">
-    💡 <b>智慧比對已開啟：</b> 只要喊單包含「平行世界小八」，無論後面接小娃、吊飾、(小) 等都會自動歸類為正式商品「平行世界小八」！特殊縮寫可在此設定對照。
+    💡 <b>智慧比對已開啟：</b> 只要喊單包含「平行世界小八」，無論後面接小娃、吊飾、(小) 等都會自動歸類為正式商品「平行世界小八」！
   </div>
   <div id="aliasList"></div>
   <button class="btn btn-secondary" onclick="addAliasRow()" style="margin-top: 5px;">+ 新增俗稱對照</button>
@@ -227,7 +241,10 @@
   <div class="actions">
     <button class="btn" onclick="processOrders()">1. 解析留言並匯入</button>
     <button class="btn btn-secondary" onclick="sortOrders()">2. 智慧整理排序</button>
+    <button class="btn btn-reset" onclick="clearAllData()">🧹 一鍵清空內容 (開新團)</button>
   </div>
+
+  <div id="warningBox" class="warn-box"></div>
 
   <!-- 整理結果預覽 -->
   <div class="section-title">階段一：登記名單與預覽 (<span id="buyerCount">0</span> 人)</div>
@@ -280,8 +297,6 @@
     { name: '平行世界小八', jpy: 1650, twd: 400, bought: '' },
     { name: '平行世界吉伊', jpy: 1650, twd: 400, bought: '' }
   ];
-
-  let defaultAliases = [];
 
   let parsedBuyers = [];
   let calculatedResults = [];
@@ -346,57 +361,22 @@
     return aliasMap;
   }
 
-  // 智慧比對：將喊單關鍵字歸類至正式商品
   function matchOfficialItem(rawText, products, aliasMap) {
     let text = rawText.trim();
     if (!text) return null;
 
-    // 1. 自訂同義詞比對
     if (aliasMap[text]) return aliasMap[text];
     for (let alias in aliasMap) {
       if (text.includes(alias)) return aliasMap[alias];
     }
 
-    // 2. 正式品名比對 (依名稱長度從長到短，避免誤判)
     const sortedProducts = [...products].sort((a, b) => b.name.length - a.name.length);
     for (let p of sortedProducts) {
-      // 若喊單文字包含正式品名，或正式品名包含喊單關鍵字
       if (text.includes(p.name) || p.name.includes(text.replace(/小娃|吊飾|娃|\(小\)|（小）|\s+/g, ''))) {
         return p.name;
       }
     }
-
-    // 3. 關鍵字核心比對 (例: 只要包含「小八」與「平行世界」，就歸類為平行世界小八)
-    for (let p of sortedProducts) {
-      const coreWords = p.name.split(/(?=[A-Z|a-z|0-9])|[\s_]+/);
-      let matchCount = 0;
-      if (p.name.length >= 2 && text.includes(p.name.substring(0, 2))) {
-        return p.name;
-      }
-    }
-
-    return text; // 真的匹配不到才傳回原文
-  }
-
-  // 圖片 OCR 辨識
-  async function handleImageUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const statusDiv = document.getElementById('ocrStatus');
-    statusDiv.innerText = '⏳ 正在讀取並辨識圖片文字，請稍候...';
-
-    try {
-      const worker = await Tesseract.createWorker('chi_tra+eng');
-      const ret = await worker.recognize(file);
-      await worker.terminate();
-
-      document.getElementById('rawLineText').value = ret.data.text;
-      statusDiv.innerText = '✅ 圖片文字辨識完成！請確認下方文字後點擊「解析留言並匯入」。';
-    } catch (err) {
-      statusDiv.innerText = '❌ 辨識失敗，請改用貼上文字方式。';
-      console.error(err);
-    }
+    return text;
   }
 
   // 1. 解析喊單
@@ -416,13 +396,12 @@
     const buyerOrder = [];
     let currentName = '';
     const timePattern = /(\d+月\d+日|昨天|前天|今天)?\s*(上午|下午)?\s*\d+:\d+/;
+    const unparsedLines = [];
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       if (timePattern.test(line)) continue;
 
-      // 檢查是否包含品項與數量 (例: 平行世界吉伊*1平行世界小八（小）*1 或 平行世界小八小娃+1)
-      // 使用全域相符拆解多品項
       const itemMatches = [...line.matchAll(/(.+?)(?:\+|\*|x|X|\s+)(\d+)/g)];
 
       if (itemMatches.length > 0) {
@@ -435,9 +414,8 @@
           }
 
           itemMatches.forEach(m => {
-            let rawItem = m[1].replace(/^(.*?)\*1\s*/, '').trim(); // 清理多品項殘留
+            let rawItem = m[1].replace(/^(.*?)\*1\s*/, '').trim();
             let qty = parseInt(m[2], 10);
-
             let officialItem = matchOfficialItem(rawItem, products, aliasMap);
 
             if (limitQty > 0 && qty > limitQty) qty = limitQty;
@@ -451,6 +429,8 @@
       } else {
         if (!timePattern.test(line) && line.length < 20) {
           currentName = line;
+        } else {
+          unparsedLines.push(line);
         }
       }
     }
@@ -462,7 +442,16 @@
     }));
 
     renderPreview();
-    alert(`解析成功！共抓取 ${parsedBuyers.length} 位買家名單，已完成智慧名稱歸類與金額算定！`);
+
+    const warnBox = document.getElementById('warningBox');
+    if (unparsedLines.length > 0) {
+      warnBox.style.display = 'block';
+      warnBox.innerHTML = `⚠️ <b>注意事項：</b> 有 ${unparsedLines.length} 行文字未辨識為喊單（可能是聊天或未帶+1）：<br>` + unparsedLines.join('<br>');
+    } else {
+      warnBox.style.display = 'none';
+    }
+
+    alert(`解析成功！共抓取 ${parsedBuyers.length} 位買家名單，已完成金額精算！`);
   }
 
   // 2. 智慧整理排序
@@ -581,6 +570,20 @@
     });
 
     alert('買到名單分配計算完成！');
+  }
+
+  // 一鍵清除內容
+  function clearAllData() {
+    if (confirm('確定要清空喊單文字與已整理的名單嗎？（不會清除設定好的商品與別名）')) {
+      document.getElementById('rawLineText').value = '';
+      parsedBuyers = [];
+      calculatedResults = [];
+      document.getElementById('previewBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">尚未匯入名單</td></tr>`;
+      document.getElementById('finalBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">尚未計算分配結果</td></tr>`;
+      document.getElementById('buyerCount').innerText = '0';
+      document.getElementById('warningBox').style.display = 'none';
+      alert('已清空所有文字與名單內容！可以開始整理新的一團了。');
+    }
   }
 
   // 匯出舊版格式『開團登記表』 Excel
