@@ -3,843 +3,776 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>芊芊代購 - 智慧多團務管理系統</title>
-  <!-- Tailwind CSS & SheetJS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>芊芊代購 - 智慧團務整理系統</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    :root {
+      --primary-color: #f06292;
+      --primary-hover: #e91e63;
+      --sidebar-bg: #f8bbd0;
+      --bg-color: #fce4ec;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+    }
+    * { box-sizing: border-box; }
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #fdf2f8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
     }
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+    /* 側邊欄樣式 */
+    .sidebar {
+      width: 260px;
+      background-color: #f8bbd0;
+      border-right: 1px solid #f48fb1;
+      display: flex;
+      flex-direction: column;
+      padding: 15px;
+      flex-shrink: 0;
     }
-    ::-webkit-scrollbar-track {
-      background: #fbcfe8;
+    .sidebar h2 {
+      font-size: 1.1rem;
+      color: #880e4f;
+      margin-top: 0;
+      margin-bottom: 15px;
+      text-align: center;
     }
-    ::-webkit-scrollbar-thumb {
-      background: #f472b6;
-      border-radius: 3px;
+    .btn-new-group {
+      background-color: #c2185b;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 15px;
+      width: 100%;
+      text-align: center;
     }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #db2777;
+    .btn-new-group:hover { background-color: #ad1457; }
+    .group-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
+    .group-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .group-item:hover { background: rgba(255, 255, 255, 0.9); }
+    .group-item.active {
+      background: white;
+      border-left: 4px solid var(--primary-hover);
+      font-weight: bold;
+      color: #c2185b;
+    }
+    .btn-group-del {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      opacity: 0.6;
+      padding: 2px 5px;
+    }
+    .btn-group-del:hover { opacity: 1; color: #d32f2f; }
+
+    /* 主要內容區 */
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 25px;
+      background: var(--bg-color);
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    }
+    h1 { color: #c2185b; margin-top: 0; margin-bottom: 20px; font-size: 1.5rem; }
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #880e4f;
+      border-left: 5px solid var(--primary-color);
+      padding-left: 10px;
+      margin-top: 25px;
+      margin-bottom: 15px;
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    label { font-size: 0.88rem; font-weight: bold; margin-bottom: 5px; display: block; }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 9px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    textarea { height: 110px; resize: vertical; }
+    .product-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1.2fr 1.2fr 35px 35px;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+    .btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 9px 16px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background-color: var(--primary-hover); }
+    .btn-secondary { background-color: #78909c; }
+    .btn-secondary:hover { background-color: #546e7a; }
+    .btn-success { background-color: #2e7d32; }
+    .btn-success:hover { background-color: #1b5e20; }
+    .btn-copy { background-color: #0288d1; padding: 7px; border-radius: 6px; color: white; border: none; cursor: pointer; font-weight: bold; }
+    .btn-del { background-color: #ef5350; padding: 7px; border-radius: 50%; color: white; border: none; cursor: pointer; }
+    .actions { margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #e0e0e0; padding: 9px; text-align: left; font-size: 0.88rem; }
+    th { background-color: #f8bbd0; color: #880e4f; }
+    tr:nth-child(even) { background-color: #fcfcfc; }
+    .badge-success { background: #c8e6c9; color: #2e7d32; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+    .badge-fail { background: #ffcdd2; color: #c62828; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+    .import-box { background-color: #f3e5f5; border: 2px dashed #ab47bc; padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-size: 0.9rem; }
   </style>
 </head>
-<body class="text-gray-800 flex h-screen overflow-hidden">
+<body>
 
-  <!-- Left Sidebar (Multi-Group Projects) -->
-  <aside class="w-64 bg-white border-r border-pink-200 flex flex-col h-full shrink-0 shadow-md">
-    <div class="p-4 border-b border-pink-100 flex items-center justify-between bg-pink-50">
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">🛍️</span>
-        <h2 class="font-bold text-pink-700 text-lg">團務專案列表</h2>
-      </div>
-    </div>
+  <!-- 左側專案欄 -->
+  <div class="sidebar">
+    <h2>🛍️ 團務專案列表</h2>
+    <button class="btn-new-group" onclick="createNewGroup()">＋ 新增團務專案</button>
+    <div class="group-list" id="groupSidebarList"></div>
+  </div>
 
-    <!-- Create Group Button -->
-    <div class="p-3">
-      <button onclick="createNewGroup()" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center gap-2">
-        <span>＋</span> 新增團務專案
-      </button>
-    </div>
+  <!-- 主介面區 -->
+  <div class="main-content">
+    <div class="container">
+      <h1 id="currentGroupTitle">團務整理系統</h1>
 
-    <!-- Group Project List -->
-    <div id="groupList" class="flex-1 overflow-y-auto px-2 space-y-1.5">
-      <!-- Dynamic group item buttons rendered via JS -->
-    </div>
-
-    <!-- Storage Status / Info Footer -->
-    <div class="p-3 border-t border-pink-100 text-xs text-pink-400 text-center bg-pink-50/50 font-medium">
-      💾 資料自動連線備份至瀏覽器 (LocalStorage)
-    </div>
-  </aside>
-
-  <!-- Main Content Dashboard -->
-  <main class="flex-1 flex flex-col h-full overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
-    
-    <!-- Header Banner -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-2xl shadow-sm border border-pink-100 gap-4">
-      <div>
-        <div class="flex items-center gap-3">
-          <h1 id="currentGroupTitle" class="text-2xl font-black text-pink-700">0928平行受注團</h1>
-          <button onclick="renameCurrentGroup()" class="text-xs bg-pink-100 hover:bg-pink-200 text-pink-700 px-2 py-1 rounded-md font-medium transition">✏️ 改名</button>
-        </div>
-        <p class="text-xs text-gray-500 mt-1">獨立儲存商品、喊單留言與登記名單。切換側邊欄即可快速開新車或瀏覽舊團！</p>
+      <!-- 舊檔還原備用 -->
+      <div class="import-box">
+        📂 <b>採購回來？上傳舊版『開團登記表 Excel』還原名單：</b>
+        <input type="file" id="excelInput" accept=".xlsx, .xls" style="margin-top: 5px;" onchange="importExcelFile(event)">
       </div>
 
-      <!-- Import Old Excel File -->
-      <div class="bg-purple-50 border border-purple-200 p-3 rounded-xl flex items-center gap-3 shadow-sm">
-        <span class="text-2xl">📂</span>
-        <div class="text-xs">
-          <div class="font-bold text-purple-900">二階段還原：匯入『開團登記表』Excel</div>
-          <input type="file" id="excelInput" accept=".xlsx, .xls" class="mt-1 text-xs text-purple-700 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 cursor-pointer" onchange="importExcelFile(event)">
-        </div>
-      </div>
-    </div>
-
-    <!-- Step 1: Master Settings & Product List -->
-    <section class="bg-white p-5 rounded-2xl shadow-sm border border-pink-100 space-y-4">
-      <div class="border-l-4 border-pink-500 pl-3">
-        <h2 class="text-lg font-bold text-pink-800">步驟 1：團務設定與商品清單</h2>
-      </div>
-
-      <!-- Settings Row -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-pink-50/50 p-4 rounded-xl border border-pink-100">
+      <!-- 步驟 1：開團設定 -->
+      <div class="section-title">步驟 1：本團商品與設定 (輸入商品名自動提示歷史品項)</div>
+      <div class="grid-2">
         <div>
-          <label class="block text-xs font-bold text-pink-900 mb-1">全團預設限購量（若商品未獨立填寫則套用；填 0 代表不限購）</label>
-          <input type="number" id="globalLimitQty" value="1" min="0" onchange="saveCurrentGroupData()" class="w-full border border-pink-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400">
+          <label>團務名稱</label>
+          <input type="text" id="groupName" onchange="updateCurrentGroupName(this.value)">
         </div>
         <div>
-          <label class="block text-xs font-bold text-pink-900 mb-1">預設試算匯率（日幣 × 匯率 ＝ 自動算定台幣定價）</label>
-          <input type="number" id="exchangeRate" value="0.24" step="0.001" onchange="saveCurrentGroupData()" class="w-full border border-pink-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400">
+          <label>計算匯率 (日幣 × 匯率 ＝ 台幣)</label>
+          <input type="number" id="exchangeRate" value="0.24" step="0.001" onchange="saveCurrentGroupData()">
         </div>
       </div>
 
-      <!-- Product List Table/Rows -->
-      <div>
-        <div class="flex justify-between items-center mb-2">
-          <label class="text-xs font-bold text-gray-700">商品清單 (輸入品名時會自動跳出歷史提示列表選取帶入)：</label>
-          <button onclick="clearProductRows()" class="text-xs text-red-500 hover:text-red-700 underline font-medium">清空本團商品</button>
-        </div>
+      <div style="margin-top: 15px;">
+        <label>商品清單 (名稱 / 日幣 / 台幣 / 限購 / 實際買到數)</label>
+        <div id="productList"></div>
+        
+        <!-- 自動輸入提示清單 -->
+        <datalist id="historyProductList"></datalist>
 
-        <!-- Global datalist for product autocompletion -->
-        <datalist id="globalProductDatalist"></datalist>
-
-        <div id="productList" class="space-y-2">
-          <!-- Dynamic product rows rendered here -->
-        </div>
-
-        <button onclick="addProductRow()" class="mt-3 bg-gray-100 hover:bg-pink-100 text-pink-700 font-bold text-sm py-2 px-4 rounded-lg transition border border-pink-200 flex items-center gap-1 shadow-sm">
-          <span>＋</span> 新增空白商品
-        </button>
-      </div>
-    </section>
-
-    <!-- Step 2: Order Input & Parsing -->
-    <section class="bg-white p-5 rounded-2xl shadow-sm border border-pink-100 space-y-4">
-      <div class="border-l-4 border-pink-500 pl-3">
-        <h2 class="text-lg font-bold text-pink-800">步驟 2：匯入喊單內文 (複製 LINE 記事本內容)</h2>
+        <button class="btn btn-secondary" onclick="addProductRow()" style="margin-top: 5px;">+ 新增商品</button>
       </div>
 
-      <textarea id="rawLineText" placeholder="請直接貼上 LINE 記事本內的喊單留言對話...&#10;範例：&#10;NANA&#10;平行世界小八+1&#10;9月25日 上午 10:31&#10;rei&#10;平行世界吉伊*1平行世界小八（小）*1" class="w-full h-36 border border-pink-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 font-mono" onchange="saveCurrentGroupData()"></textarea>
-
-      <!-- Action Buttons -->
-      <div class="flex flex-wrap gap-3">
-        <button onclick="processOrders()" class="bg-pink-500 hover:bg-pink-600 text-white font-bold py-2.5 px-6 rounded-xl shadow transition flex items-center gap-1">
-          🚀 1. 解析留言並匯入名單
-        </button>
-        <button onclick="sortOrders()" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-2.5 px-5 rounded-xl shadow transition">
-          📊 2. 智慧整理排序
-        </button>
-        <button onclick="clearTextAndBuyers()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl shadow transition">
-          🧹 清空喊單對話與名單
-        </button>
+      <!-- 步驟 2：匯入喊單 -->
+      <div class="section-title">步驟 2：匯入喊單文字 (貼上 LINE 記事本內容)</div>
+      <textarea id="rawLineText" placeholder="請貼上 LINE 記事本對話內文..." onchange="saveCurrentGroupData()"></textarea>
+      
+      <div class="actions">
+        <button class="btn" onclick="processOrders()">1. 解析留言並匯入</button>
+        <button class="btn btn-secondary" onclick="sortOrders()">2. 智慧整理排序</button>
       </div>
 
-      <!-- Warning alert box for unparsed lines -->
-      <div id="warningBox" class="hidden bg-amber-50 border-l-4 border-amber-400 p-3 rounded-lg text-xs text-amber-800 space-y-1"></div>
-    </section>
-
-    <!-- Stage 1 Preview & Export -->
-    <section class="bg-white p-5 rounded-2xl shadow-sm border border-pink-100 space-y-4">
-      <div class="flex justify-between items-center border-l-4 border-pink-500 pl-3">
-        <h2 class="text-lg font-bold text-pink-800">階段一：登記名單與金額預覽 (<span id="buyerCount" class="text-pink-600 font-black">0</span> 人)</h2>
-      </div>
-
-      <div class="overflow-x-auto rounded-xl border border-gray-200">
-        <table class="w-full text-left text-sm">
-          <thead class="bg-pink-100 text-pink-900 font-bold border-b border-pink-200">
+      <!-- 整理結果預覽 -->
+      <div class="section-title">階段一：登記名單預覽 (<span id="buyerCount">0</span> 人)</div>
+      <div style="overflow-x: auto;">
+        <table id="previewTable">
+          <thead>
             <tr>
-              <th class="p-3">名字</th>
-              <th class="p-3">買家喊單品項</th>
-              <th class="p-3">台幣價格</th>
-              <th class="p-3">日幣價格</th>
+              <th>名字</th>
+              <th>品項</th>
+              <th>台幣價格</th>
+              <th>日幣價格</th>
             </tr>
           </thead>
-          <tbody id="previewBody" class="divide-y divide-gray-100">
-            <tr><td colspan="4" class="p-4 text-center text-gray-400">尚未匯入名單</td></tr>
+          <tbody id="previewBody">
+            <tr><td colspan="4" style="text-align:center; color:#999;">尚未匯入名單</td></tr>
           </tbody>
         </table>
       </div>
 
-      <div>
-        <button onclick="exportGroupExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl shadow transition flex items-center gap-2">
-          📥 匯出『開團登記表』Excel (嚴格 5 欄結構：名字 / 品項 / 價格 / 日幣 / 備註)
-        </button>
-      </div>
-    </section>
-
-    <!-- Stage 2 Allocation & Final Results -->
-    <section class="bg-white p-5 rounded-2xl shadow-sm border border-pink-100 space-y-4 mb-8">
-      <div class="border-l-4 border-pink-500 pl-3">
-        <h2 class="text-lg font-bold text-pink-800">階段二：採購完成後分配結果</h2>
+      <div class="actions" style="margin-top: 15px;">
+        <button class="btn btn-success" onclick="exportGroupExcel()">📥 匯出 5 欄格式『開團登記表』Excel</button>
       </div>
 
-      <p class="text-xs text-gray-500">請先在步驟 1 商品清單中的「實際買到數」輸入現場實買數量，再點擊下方按鈕進行分配。</p>
-
-      <button onclick="calculateFinalResults()" class="bg-pink-500 hover:bg-pink-600 text-white font-bold py-2.5 px-6 rounded-xl shadow transition">
-        🎲 3. 生成實際買到分配名單
-      </button>
-
-      <div class="overflow-x-auto rounded-xl border border-gray-200">
-        <table class="w-full text-left text-sm">
-          <thead class="bg-pink-100 text-pink-900 font-bold border-b border-pink-200">
+      <!-- 步驟 3：最終買到名單 -->
+      <div class="section-title">階段二：採購分配結果</div>
+      <button class="btn" onclick="calculateFinalResults()">3. 生成買到名單 (請先在上方填寫實際買到數)</button>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
             <tr>
-              <th class="p-3">名字</th>
-              <th class="p-3">實際買到品項</th>
-              <th class="p-3">買到件數</th>
-              <th class="p-3">分配結果</th>
+              <th>名字</th>
+              <th>買到品項</th>
+              <th>數量</th>
+              <th>分配結果</th>
             </tr>
           </thead>
-          <tbody id="finalBody" class="divide-y divide-gray-100">
-            <tr><td colspan="4" class="p-4 text-center text-gray-400">尚未計算分配結果</td></tr>
+          <tbody id="finalBody">
+            <tr><td colspan="4" style="text-align:center; color:#999;">尚未計算分配結果</td></tr>
           </tbody>
         </table>
       </div>
 
-      <div>
-        <button onclick="exportFinalExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl shadow transition flex items-center gap-2">
-          📥 匯出『最終買到名單』Excel
-        </button>
+      <div class="actions" style="margin-top: 15px;">
+        <button class="btn btn-success" onclick="exportFinalExcel()">📥 匯出『最終買到名單』Excel</button>
       </div>
-    </section>
+    </div>
+  </div>
 
-  </main>
+<script>
+  let groupsData = JSON.parse(localStorage.getItem('qian_groups_data') || '{}');
+  let currentGroupId = localStorage.getItem('qian_current_group_id') || '';
+  let globalHistory = JSON.parse(localStorage.getItem('qian_global_history') || '{}');
 
-  <script>
-    // LocalStorage System Data Models
-    let systemGroups = JSON.parse(localStorage.getItem('qian_groups_v3') || '[]');
-    let currentGroupIndex = 0;
-    
-    // Cross-Group Global Product History Dictionary
-    let globalProductHistory = JSON.parse(localStorage.getItem('qian_global_product_history_v3') || '{}');
-
-    // Default template when no groups exist
-    if (systemGroups.length === 0) {
-      systemGroups.push({
-        id: Date.now(),
-        name: '0928平行受注團',
-        globalLimit: 1,
-        exchangeRate: 0.24,
-        products: [
-          { name: '平行世界小八', jpy: 1650, twd: 400, limit: '', bought: '' },
-          { name: '平行世界吉伊', jpy: 1650, twd: 400, limit: '', bought: '' }
-        ],
-        rawLineText: '',
-        parsedBuyers: []
-      });
-      saveGroupsToStorage();
+  window.onload = function() {
+    if (Object.keys(groupsData).length === 0) {
+      createNewGroup('0928平行受注團');
+    } else {
+      if (!currentGroupId || !groupsData[currentGroupId]) {
+        currentGroupId = Object.keys(groupsData)[0];
+      }
+      renderSidebar();
+      loadGroupData(currentGroupId);
     }
+    updateDatalist();
+  };
 
-    // Page Initialization
-    window.onload = function() {
-      renderGroupSidebar();
-      updateGlobalDatalist();
-      loadCurrentGroup();
+  function createNewGroup(defaultName = '') {
+    const id = 'group_' + Date.now();
+    const name = defaultName || prompt('請輸入新團務名稱：', '新開團務');
+    if (!name) return;
+
+    groupsData[id] = {
+      id,
+      name,
+      rate: 0.24,
+      products: [
+        { name: '平行世界小八', jpy: 1650, twd: 400, limit: '', bought: '' },
+        { name: '平行世界吉伊', jpy: 1650, twd: 400, limit: '', bought: '' }
+      ],
+      rawText: '',
+      buyers: []
     };
 
-    function saveGroupsToStorage() {
-      localStorage.setItem('qian_groups_v3', JSON.stringify(systemGroups));
-      localStorage.setItem('qian_global_product_history_v3', JSON.stringify(globalProductHistory));
-      updateGlobalDatalist();
-    }
+    currentGroupId = id;
+    saveAllToStorage();
+    renderSidebar();
+    loadGroupData(id);
+  }
 
-    // Render HTML5 Native Datalist for Autocompletion
-    function updateGlobalDatalist() {
-      const datalist = document.getElementById('globalProductDatalist');
-      datalist.innerHTML = '';
-      Object.keys(globalProductHistory).forEach(name => {
-        const p = globalProductHistory[name];
-        const opt = document.createElement('option');
-        opt.value = p.name;
-        opt.label = `¥${p.jpy || 0} / $${p.twd || 0}`;
-        datalist.appendChild(opt);
-      });
-    }
-
-    // Sidebar Rendering
-    function renderGroupSidebar() {
-      const listContainer = document.getElementById('groupList');
-      listContainer.innerHTML = '';
-
-      systemGroups.forEach((group, index) => {
-        const active = index === currentGroupIndex;
-        const btn = document.createElement('div');
-        btn.className = `group-item border border-pink-200 flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-sm font-medium transition ${
-          active ? 'bg-pink-500 text-white border-pink-500 shadow-sm font-bold' : 'bg-white hover:bg-pink-50 text-gray-700'
-        }`;
-        
-        btn.onclick = () => switchGroup(index);
-
-        btn.innerHTML = `
-          <div class="flex items-center gap-2 truncate">
-            <span>${active ? '📂' : '📁'}</span>
-            <span class="truncate">${group.name}</span>
-          </div>
-          ${systemGroups.length > 1 ? `
-            <button onclick="deleteGroup(event, ${index})" class="text-xs text-pink-200 hover:text-white p-1 rounded hover:bg-pink-600 transition" title="刪除專案">✕</button>
-          ` : ''}
-        `;
-        listContainer.appendChild(btn);
-      });
-    }
-
-    function createNewGroup() {
-      const name = prompt('請輸入新團務專案名稱：', `新團務專案 ${systemGroups.length + 1}`);
-      if (name && name.trim()) {
-        systemGroups.push({
-          id: Date.now(),
-          name: name.trim(),
-          globalLimit: 1,
-          exchangeRate: 0.24,
-          products: [],
-          rawLineText: '',
-          parsedBuyers: []
-        });
-        currentGroupIndex = systemGroups.length - 1;
-        saveGroupsToStorage();
-        renderGroupSidebar();
-        loadCurrentGroup();
-      }
-    }
-
-    function switchGroup(index) {
-      currentGroupIndex = index;
-      renderGroupSidebar();
-      loadCurrentGroup();
-    }
-
-    function renameCurrentGroup() {
-      const current = systemGroups[currentGroupIndex];
-      const newName = prompt('請修改團務名稱：', current.name);
-      if (newName && newName.trim()) {
-        current.name = newName.trim();
-        saveGroupsToStorage();
-        renderGroupSidebar();
-        document.getElementById('currentGroupTitle').innerText = current.name;
-      }
-    }
-
-    function deleteGroup(e, index) {
-      e.stopPropagation();
-      if (confirm(`確定要刪除團務專案「${systemGroups[index].name}」及其所有喊單資料嗎？`)) {
-        systemGroups.splice(index, 1);
-        if (currentGroupIndex >= systemGroups.length) {
-          currentGroupIndex = systemGroups.length - 1;
-        }
-        saveGroupsToStorage();
-        renderGroupSidebar();
-        loadCurrentGroup();
-      }
-    }
-
-    // Load Group Data into Active Controls
-    function loadCurrentGroup() {
-      const group = systemGroups[currentGroupIndex];
-      document.getElementById('currentGroupTitle').innerText = group.name;
-      document.getElementById('globalLimitQty').value = group.globalLimit !== undefined ? group.globalLimit : 1;
-      document.getElementById('exchangeRate').value = group.exchangeRate || 0.24;
-      document.getElementById('rawLineText').value = group.rawLineText || '';
-
-      const productContainer = document.getElementById('productList');
-      productContainer.innerHTML = '';
-      if (group.products && group.products.length > 0) {
-        group.products.forEach(p => addProductRow(p.name, p.jpy, p.twd, p.limit, p.bought));
+  function deleteGroup(id, e) {
+    e.stopPropagation();
+    const groupName = groupsData[id] ? groupsData[id].name : '該團務';
+    if (confirm(`確定要刪除專案【${groupName}】嗎？（歷史商品記憶不會丟失）`)) {
+      delete groupsData[id];
+      const remainingIds = Object.keys(groupsData);
+      if (remainingIds.length > 0) {
+        currentGroupId = remainingIds[0];
       } else {
-        addProductRow(); // Default blank row
-      }
-
-      renderPreview();
-      document.getElementById('finalBody').innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">尚未計算分配結果</td></tr>`;
-      document.getElementById('warningBox').classList.add('hidden');
-    }
-
-    // Save Active Form Inputs Back to Active Model
-    function saveCurrentGroupData() {
-      const group = systemGroups[currentGroupIndex];
-      group.globalLimit = parseInt(document.getElementById('globalLimitQty').value, 10) || 0;
-      group.exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 0.24;
-      group.rawLineText = document.getElementById('rawLineText').value;
-
-      const rows = document.querySelectorAll('.product-row');
-      const products = [];
-      rows.forEach(r => {
-        const name = r.querySelector('.p-name').value.trim();
-        const jpy = parseFloat(r.querySelector('.p-jpy').value) || '';
-        const twd = parseFloat(r.querySelector('.p-twd').value) || '';
-        const limit = r.querySelector('.p-limit').value;
-        const bought = r.querySelector('.p-bought').value;
-        if (name) {
-          products.push({ name, jpy, twd, limit, bought });
-          // Synchronize to cross-group datalist dictionary
-          globalProductHistory[name] = { name, jpy, twd, limit };
-        }
-      });
-      group.products = products;
-      saveGroupsToStorage();
-    }
-
-    // Add Product Row with HTML5 Native Datalist Binding
-    function addProductRow(name = '', jpy = '', twd = '', limit = '', bought = '') {
-      const div = document.createElement('div');
-      div.className = 'product-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-gray-50/70 p-2 rounded-xl border border-pink-100';
-      div.innerHTML = `
-        <div class="sm:col-span-4">
-          <input type="text" list="globalProductDatalist" placeholder="正式商品名稱 (可自動帶入)" class="p-name w-full border border-pink-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" value="${name}" onchange="handleNameChange(this)">
-        </div>
-        <div class="sm:col-span-2">
-          <input type="number" placeholder="日幣" class="p-jpy w-full border border-pink-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" value="${jpy}" onchange="calcRowTwd(this); saveCurrentGroupData();">
-        </div>
-        <div class="sm:col-span-2">
-          <input type="number" placeholder="台幣" class="p-twd w-full border border-pink-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" value="${twd}" onchange="saveCurrentGroupData()">
-        </div>
-        <div class="sm:col-span-2">
-          <input type="number" placeholder="限購(無不填)" class="p-limit w-full border border-pink-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" value="${limit}" onchange="saveCurrentGroupData()">
-        </div>
-        <div class="sm:col-span-1">
-          <input type="number" placeholder="實買" class="p-bought w-full border border-pink-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" value="${bought}" onchange="saveCurrentGroupData()">
-        </div>
-        <div class="sm:col-span-1 flex gap-1 justify-end">
-          <button onclick="copyProductRow(this)" title="複製列" class="bg-blue-500 hover:bg-blue-600 text-white rounded-lg p-2 text-xs font-bold transition">📋</button>
-          <button onclick="this.closest('.product-row').remove(); saveCurrentGroupData();" title="刪除列" class="bg-red-500 hover:bg-red-600 text-white rounded-lg p-2 text-xs font-bold transition">✕</button>
-        </div>
-      `;
-      document.getElementById('productList').appendChild(div);
-    }
-
-    // Auto Fill Input Fields when Select from Datalist
-    function handleNameChange(inputElem) {
-      const val = inputElem.value.trim();
-      if (globalProductHistory[val]) {
-        const p = globalProductHistory[val];
-        const row = inputElem.closest('.product-row');
-        if (p.jpy && !row.querySelector('.p-jpy').value) row.querySelector('.p-jpy').value = p.jpy;
-        if (p.twd && !row.querySelector('.p-twd').value) row.querySelector('.p-twd').value = p.twd;
-        if (p.limit && !row.querySelector('.p-limit').value) row.querySelector('.p-limit').value = p.limit;
-      }
-      saveCurrentGroupData();
-    }
-
-    function calcRowTwd(inputElem) {
-      const row = inputElem.closest('.product-row');
-      const jpy = parseFloat(inputElem.value) || 0;
-      const rate = parseFloat(document.getElementById('exchangeRate').value) || 0.24;
-      const twdInput = row.querySelector('.p-twd');
-      if (jpy > 0 && !twdInput.value) {
-        twdInput.value = Math.round(jpy * rate);
-      }
-    }
-
-    function copyProductRow(btnElem) {
-      const row = btnElem.closest('.product-row');
-      const name = row.querySelector('.p-name').value;
-      const jpy = row.querySelector('.p-jpy').value;
-      const twd = row.querySelector('.p-twd').value;
-      const limit = row.querySelector('.p-limit').value;
-      const bought = row.querySelector('.p-bought').value;
-      
-      addProductRow(name, jpy, twd, limit, bought);
-      saveCurrentGroupData();
-    }
-
-    function clearProductRows() {
-      if (confirm('確定要清空本團所有商品嗎？')) {
-        document.getElementById('productList').innerHTML = '';
-        saveCurrentGroupData();
-      }
-    }
-
-    function getProductsFromDOM() {
-      const globalLimit = parseInt(document.getElementById('globalLimitQty').value, 10) || 0;
-      const rows = document.querySelectorAll('.product-row');
-      const products = [];
-      rows.forEach(r => {
-        const name = r.querySelector('.p-name').value.trim();
-        const jpy = parseFloat(r.querySelector('.p-jpy').value) || 0;
-        const twd = parseFloat(r.querySelector('.p-twd').value) || 0;
-        const limitVal = r.querySelector('.p-limit').value.trim();
-        const limit = limitVal !== '' ? (parseInt(limitVal, 10) || 0) : globalLimit;
-        const boughtVal = r.querySelector('.p-bought').value;
-        const bought = boughtVal === '' ? 9999 : parseInt(boughtVal, 10);
-        if (name) {
-          products.push({ name, jpy, twd, limit, bought: isNaN(bought) ? 9999 : bought });
-        }
-      });
-      return products;
-    }
-
-    // Order Parsing Algorithm (Supports continuous items, dual limit enforcement)
-    function processOrders() {
-      saveCurrentGroupData();
-      const rawText = document.getElementById('rawLineText').value;
-      if (!rawText.trim()) {
-        alert('請先貼上 LINE 喊單對話內容！');
+        createNewGroup('新開團務');
         return;
       }
+      saveAllToStorage();
+      renderSidebar();
+      loadGroupData(currentGroupId);
+    }
+  }
 
-      const products = getProductsFromDOM();
-      const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      
-      const buyerMap = {};
-      const buyerOrder = [];
-      let currentName = '';
-      const timePattern = /(\d+月\d+日|昨天|前天|今天)?\s*(上午|下午)?\s*\d+:\d+/;
-      const unparsedLines = [];
+  function renderSidebar() {
+    const listDiv = document.getElementById('groupSidebarList');
+    listDiv.innerHTML = '';
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (timePattern.test(line)) continue;
+    Object.keys(groupsData).forEach(id => {
+      const g = groupsData[id];
+      const item = document.createElement('div');
+      item.className = 'group-item' + (id === currentGroupId ? ' active' : '');
+      item.onclick = () => switchGroup(id);
+      item.innerHTML = `
+        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${g.name}</span>
+        <button class="btn-group-del" title="刪除此專案" onclick="deleteGroup('${id}', event)">🗑️</button>
+      `;
+      listDiv.appendChild(item);
+    });
+  }
 
-        let matchedLine = false;
+  function switchGroup(id) {
+    saveCurrentGroupData();
+    currentGroupId = id;
+    localStorage.setItem('qian_current_group_id', currentGroupId);
+    renderSidebar();
+    loadGroupData(id);
+  }
 
-        products.forEach(p => {
-          if (line.includes(p.name) || p.name.includes(line.replace(/小娃|吊飾|娃|\(小\)|（小）|\s+/g, ''))) {
-            matchedLine = true;
-            let qty = 1;
-            const qtyMatch = line.match(/(?:\+|\*|x|X|\s*)(\d+)/);
-            if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
+  function loadGroupData(id) {
+    const g = groupsData[id];
+    if (!g) return;
 
-            if (p.limit > 0 && qty > p.limit) qty = p.limit;
+    document.getElementById('groupName').value = g.name;
+    document.getElementById('exchangeRate').value = g.rate || 0.24;
+    document.getElementById('rawLineText').value = g.rawText || '';
+    document.getElementById('currentGroupTitle').innerText = g.name;
 
-            if (!currentName && i > 0) currentName = lines[i - 1];
+    const pList = document.getElementById('productList');
+    pList.innerHTML = '';
+    (g.products || []).forEach(p => addProductRow(p.name, p.jpy, p.twd, p.limit, p.bought));
 
-            if (currentName) {
-              if (!buyerMap[currentName]) {
-                buyerMap[currentName] = { items: {} };
-                buyerOrder.push(currentName);
-              }
-              buyerMap[currentName].items[p.name] = (buyerMap[currentName].items[p.name] || 0) + qty;
-              if (p.limit > 0 && buyerMap[currentName].items[p.name] > p.limit) {
-                buyerMap[currentName].items[p.name] = p.limit;
-              }
+    renderPreview();
+  }
+
+  function saveCurrentGroupData() {
+    if (!currentGroupId || !groupsData[currentGroupId]) return;
+
+    const g = groupsData[currentGroupId];
+    g.name = document.getElementById('groupName').value.trim() || '未命名團務';
+    g.rate = parseFloat(document.getElementById('exchangeRate').value) || 0.24;
+    g.rawText = document.getElementById('rawLineText').value;
+
+    const rows = document.querySelectorAll('.product-row');
+    const products = [];
+    rows.forEach(r => {
+      const name = r.querySelector('.p-name').value.trim();
+      const jpy = parseFloat(r.querySelector('.p-jpy').value) || 0;
+      const twd = parseFloat(r.querySelector('.p-twd').value) || 0;
+      const limit = r.querySelector('.p-limit').value;
+      const bought = r.querySelector('.p-bought').value;
+      if (name) {
+        products.push({ name, jpy, twd, limit, bought });
+        // 存入全域歷史記憶
+        globalHistory[name] = { name, jpy, twd, limit };
+      }
+    });
+
+    g.products = products;
+    saveAllToStorage();
+    updateDatalist();
+  }
+
+  function saveAllToStorage() {
+    localStorage.setItem('qian_groups_data', JSON.stringify(groupsData));
+    localStorage.setItem('qian_current_group_id', currentGroupId);
+    localStorage.setItem('qian_global_history', JSON.stringify(globalHistory));
+  }
+
+  function updateCurrentGroupName(val) {
+    document.getElementById('currentGroupTitle').innerText = val || '團務整理系統';
+    saveCurrentGroupData();
+    renderSidebar();
+  }
+
+  function updateDatalist() {
+    const dl = document.getElementById('historyProductList');
+    dl.innerHTML = '';
+    Object.keys(globalHistory).forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k;
+      dl.appendChild(opt);
+    });
+  }
+
+  function addProductRow(name = '', jpy = '', twd = '', limit = '', bought = '') {
+    const div = document.createElement('div');
+    div.className = 'product-row';
+    div.innerHTML = `
+      <input type="text" placeholder="商品名稱" class="p-name" value="${name}" list="historyProductList" onchange="onNameChange(this)">
+      <input type="number" placeholder="日幣" class="p-jpy" value="${jpy}" onchange="calcRowTwd(this)">
+      <input type="number" placeholder="台幣" class="p-twd" value="${twd}" onchange="saveCurrentGroupData()">
+      <input type="number" placeholder="限購" class="p-limit" value="${limit}" onchange="saveCurrentGroupData()">
+      <input type="number" placeholder="買到" class="p-bought" value="${bought}" onchange="saveCurrentGroupData()">
+      <button class="btn-copy" title="複製此商品" onclick="copyProductRow(this)">📋</button>
+      <button class="btn-del" title="刪除" onclick="this.parentElement.remove(); saveCurrentGroupData();">✕</button>
+    `;
+    document.getElementById('productList').appendChild(div);
+  }
+
+  function onNameChange(elem) {
+    const name = elem.value.trim();
+    if (globalHistory[name]) {
+      const row = elem.parentElement;
+      row.querySelector('.p-jpy').value = globalHistory[name].jpy;
+      row.querySelector('.p-twd').value = globalHistory[name].twd;
+      row.querySelector('.p-limit').value = globalHistory[name].limit;
+    }
+    saveCurrentGroupData();
+  }
+
+  function calcRowTwd(inputElem) {
+    const row = inputElem.parentElement;
+    const jpy = parseFloat(inputElem.value) || 0;
+    const rate = parseFloat(document.getElementById('exchangeRate').value) || 0.24;
+    const twdInput = row.querySelector('.p-twd');
+    if (jpy > 0 && !twdInput.value) {
+      twdInput.value = Math.round(jpy * rate);
+    }
+    saveCurrentGroupData();
+  }
+
+  function copyProductRow(btnElem) {
+    const row = btnElem.parentElement;
+    const name = row.querySelector('.p-name').value;
+    const jpy = row.querySelector('.p-jpy').value;
+    const twd = row.querySelector('.p-twd').value;
+    const limit = row.querySelector('.p-limit').value;
+    const bought = row.querySelector('.p-bought').value;
+    
+    addProductRow(name, jpy, twd, limit, bought);
+    saveCurrentGroupData();
+  }
+
+  function processOrders() {
+    saveCurrentGroupData();
+    const g = groupsData[currentGroupId];
+    const rawText = g.rawText;
+    if (!rawText || !rawText.trim()) {
+      alert('請先貼上 LINE 喊單對話！');
+      return;
+    }
+
+    const products = g.products;
+    const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    
+    const buyerMap = {};
+    const buyerOrder = [];
+    let currentName = '';
+    const timePattern = /(\d+月\d+日|昨天|前天|今天)?\s*(上午|下午)?\s*\d+:\d+/;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (timePattern.test(line)) continue;
+
+      let matchedLine = false;
+
+      products.forEach(p => {
+        if (line.includes(p.name) || p.name.includes(line.replace(/小娃|吊飾|娃|\(小\)|（小）|\s+/g, ''))) {
+          matchedLine = true;
+          let qty = 1;
+          const qtyMatch = line.match(/(?:\+|\*|x|X|\s*)(\d+)/);
+          if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
+
+          const limitNum = parseInt(p.limit, 10) || 0;
+          if (limitNum > 0 && qty > limitNum) qty = limitNum;
+
+          if (!currentName && i > 0) currentName = lines[i - 1];
+
+          if (currentName) {
+            if (!buyerMap[currentName]) {
+              buyerMap[currentName] = { items: {} };
+              buyerOrder.push(currentName);
+            }
+            buyerMap[currentName].items[p.name] = (buyerMap[currentName].items[p.name] || 0) + qty;
+            if (limitNum > 0 && buyerMap[currentName].items[p.name] > limitNum) {
+              buyerMap[currentName].items[p.name] = limitNum;
             }
           }
-        });
+        }
+      });
 
-        if (!matchedLine) {
-          if (!timePattern.test(line) && line.length < 20) {
-            currentName = line;
-          } else {
-            unparsedLines.push(line);
-          }
+      if (!matchedLine && !timePattern.test(line) && line.length < 20) {
+        currentName = line;
+      }
+    }
+
+    g.buyers = buyerOrder.map((name, index) => ({
+      name,
+      items: buyerMap[name].items,
+      originalIndex: index
+    }));
+
+    saveAllToStorage();
+    renderPreview();
+    alert(`解析成功！共抓取 ${g.buyers.length} 位買家名單！`);
+  }
+
+  function sortOrders() {
+    const g = groupsData[currentGroupId];
+    if (!g.buyers || g.buyers.length === 0) {
+      alert('無資料可排序！');
+      return;
+    }
+
+    g.buyers.sort((a, b) => {
+      const aKeys = Object.keys(a.items);
+      const bKeys = Object.keys(b.items);
+      const aTypes = aKeys.length;
+      const bTypes = bKeys.length;
+
+      if (aTypes !== bTypes) return bTypes - aTypes;
+      if (aTypes === 1 && bTypes === 1) {
+        if (aKeys[0] !== bKeys[0]) {
+          return aKeys[0].localeCompare(bKeys[0], 'zh-Hant');
+        }
+      }
+      return a.originalIndex - b.originalIndex;
+    });
+
+    saveAllToStorage();
+    renderPreview();
+    alert('智慧整理排序完成！');
+  }
+
+  function renderPreview() {
+    const g = groupsData[currentGroupId];
+    const products = g.products || [];
+    const buyers = g.buyers || [];
+
+    const tbody = document.getElementById('previewBody');
+    tbody.innerHTML = '';
+    document.getElementById('buyerCount').innerText = buyers.length;
+
+    buyers.forEach(b => {
+      let itemText = [];
+      let totalTwd = 0;
+      let totalJpy = 0;
+
+      Object.keys(b.items).forEach(k => {
+        const q = b.items[k];
+        itemText.push(q > 1 ? `${k}*${q}` : k);
+        const pInfo = products.find(p => p.name === k);
+        if (pInfo) {
+          totalTwd += pInfo.twd * q;
+          totalJpy += pInfo.jpy * q;
+        }
+      });
+
+      let trHtml = `<td><b>${b.name}</b></td><td>${itemText.join('+')}</td><td><b>$${totalTwd}</b></td><td>¥${totalJpy}</td>`;
+      const tr = document.createElement('tr');
+      tr.innerHTML = trHtml;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function calculateFinalResults() {
+    const g = groupsData[currentGroupId];
+    const products = g.products || [];
+    const buyers = g.buyers || [];
+
+    const stockMap = {};
+    products.forEach(p => {
+      const bVal = parseInt(p.bought, 10);
+      stockMap[p.name] = isNaN(bVal) ? 9999 : bVal;
+    });
+
+    const tbody = document.getElementById('finalBody');
+    tbody.innerHTML = '';
+    g.calculatedResults = [];
+
+    buyers.forEach(b => {
+      let gotItems = [];
+      let requestedCount = 0;
+      let gotCount = 0;
+
+      Object.keys(b.items).forEach(k => {
+        const qty = b.items[k];
+        requestedCount += qty;
+        const stock = stockMap[k] !== undefined ? stockMap[k] : 0;
+
+        if (stock >= qty) {
+          stockMap[k] -= qty;
+          gotCount += qty;
+          gotItems.push(qty > 1 ? `${k}*${qty}` : k);
+        } else if (stock > 0) {
+          gotCount += stock;
+          gotItems.push(`${k}*${stock}(部分)`);
+          stockMap[k] = 0;
+        }
+      });
+
+      let statusText = '未買到';
+      let statusBadge = `<span class="badge-fail">未買到</span>`;
+      if (gotCount === requestedCount && requestedCount > 0) {
+        statusText = '有買到';
+        statusBadge = `<span class="badge-success">有買到</span>`;
+      } else if (gotCount > 0) {
+        statusText = '部分買到';
+        statusBadge = `<span class="badge-success">部分買到</span>`;
+      }
+
+      g.calculatedResults.push({
+        name: b.name,
+        gotItemsStr: gotItems.join('+') || '無',
+        gotCount,
+        statusText
+      });
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><b>${b.name}</b></td><td>${gotItems.join('+') || '無'}</td><td>${gotCount}</td><td>${statusBadge}</td>`;
+      tbody.appendChild(tr);
+    });
+
+    saveAllToStorage();
+    alert('買到名單分配計算完成！');
+  }
+
+  function importExcelFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+      if (json.length < 8) {
+        alert('無效的開團登記表 Excel 格式！');
+        return;
+      }
+
+      const pNames = json[1].slice(1);
+      const pJpys = json[2].slice(1);
+      const pTwds = json[3].slice(1);
+
+      document.getElementById('productList').innerHTML = '';
+      pNames.forEach((name, idx) => {
+        if (name) addProductRow(name, pJpys[idx] || 0, pTwds[idx] || 0, '', '');
+      });
+
+      const g = groupsData[currentGroupId];
+      g.buyers = [];
+      for (let r = 7; r < json.length; r++) {
+        const row = json[r];
+        if (row && row[0]) {
+          const name = row[0];
+          const items = {};
+          pNames.forEach((pName, pIdx) => {
+            const qty = parseInt(row[5 + pIdx], 10) || 0;
+            if (qty > 0 && pName) items[pName] = qty;
+          });
+          g.buyers.push({ name, items, originalIndex: r });
         }
       }
 
-      const parsedBuyers = buyerOrder.map((name, index) => ({
-        name,
-        items: buyerMap[name].items,
-        originalIndex: index
-      }));
-
-      systemGroups[currentGroupIndex].parsedBuyers = parsedBuyers;
-      saveGroupsToStorage();
+      saveCurrentGroupData();
       renderPreview();
+      alert(`成功還原 【${file.name}】 名單！共 ${g.buyers.length} 位買家，請填寫採購數量進行分配！`);
+    };
+    reader.readAsArrayBuffer(file);
+  }
 
-      const warnBox = document.getElementById('warningBox');
-      if (unparsedLines.length > 0) {
-        warnBox.classList.remove('hidden');
-        warnBox.innerHTML = `⚠️ <b>未匹配跳過提醒：</b> 有 ${unparsedLines.length} 行文字未被識別為喊單品項（可能為聊天訊息）：<br>` + unparsedLines.join('<br>');
-      } else {
-        warnBox.classList.add('hidden');
-      }
-
-      alert(`解析成功！共抓取 ${parsedBuyers.length} 位買家名單。`);
+  function exportGroupExcel() {
+    const g = groupsData[currentGroupId];
+    const buyers = g.buyers || [];
+    if (buyers.length === 0) {
+      alert('請先匯入喊單資料！');
+      return;
     }
 
-    function sortOrders() {
-      const group = systemGroups[currentGroupIndex];
-      if (!group.parsedBuyers || group.parsedBuyers.length === 0) {
-        alert('無名單可排序！');
-        return;
-      }
+    const groupName = g.name || '團務表';
+    const products = g.products || [];
 
-      group.parsedBuyers.sort((a, b) => {
-        const aKeys = Object.keys(a.items);
-        const bKeys = Object.keys(b.items);
-        const aTypes = aKeys.length;
-        const bTypes = bKeys.length;
+    const sheetData = [];
+    sheetData.push([]); // Row 1
 
-        if (aTypes !== bTypes) return bTypes - aTypes;
-        if (aTypes === 1 && bTypes === 1) {
-          if (aKeys[0] !== bKeys[0]) {
-            return aKeys[0].localeCompare(bKeys[0], 'zh-Hant');
-          }
+    const row2 = ['品名'];
+    products.forEach(p => row2.push(p.name));
+    sheetData.push(row2);
+
+    const row3 = ['日幣'];
+    products.forEach(p => row3.push(p.jpy));
+    sheetData.push(row3);
+
+    const row4 = ['定價(未二補)'];
+    products.forEach(p => row4.push(p.twd));
+    sheetData.push(row4);
+
+    const row5 = ['總數'];
+    products.forEach(p => {
+      let sum = 0;
+      buyers.forEach(b => sum += (b.items[p.name] || 0));
+      row5.push(sum);
+    });
+    sheetData.push(row5);
+
+    sheetData.push([]); // Row 6
+
+    const row7 = ['名字', '品項', '價格', '日幣', '備註'];
+    sheetData.push(row7);
+
+    buyers.forEach(b => {
+      let itemStrParts = [];
+      let totalTwd = 0;
+      let totalJpy = 0;
+
+      Object.keys(b.items).forEach(k => {
+        const q = b.items[k];
+        itemStrParts.push(q > 1 ? `${k}*${q}` : k);
+        const pInfo = products.find(p => p.name === k);
+        if (pInfo) {
+          totalTwd += pInfo.twd * q;
+          totalJpy += pInfo.jpy * q;
         }
-        return a.originalIndex - b.originalIndex;
       });
 
-      saveGroupsToStorage();
-      renderPreview();
-      alert('智慧整理排序完成！');
+      const row = [b.name, itemStrParts.join('+'), totalTwd, totalJpy, ''];
+      sheetData.push(row);
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    XLSX.utils.book_append_sheet(wb, ws, groupName);
+    XLSX.writeFile(wb, `${groupName}_開團登記表.xlsx`);
+  }
+
+  function exportFinalExcel() {
+    const g = groupsData[currentGroupId];
+    const calc = g.calculatedResults || [];
+    if (calc.length === 0) {
+      alert('請先點擊「3. 生成買到名單」！');
+      return;
     }
 
-    function renderPreview() {
-      const group = systemGroups[currentGroupIndex];
-      const parsedBuyers = group.parsedBuyers || [];
-      const products = getProductsFromDOM();
+    const groupName = g.name || '團務表';
+    const sheetData = [['名字', '買到品項', '數量', '分配結果']];
 
-      const tbody = document.getElementById('previewBody');
-      tbody.innerHTML = '';
-      document.getElementById('buyerCount').innerText = parsedBuyers.length;
+    calc.forEach(r => {
+      sheetData.push([r.name, r.gotItemsStr, r.gotCount, r.statusText]);
+    });
 
-      if (parsedBuyers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">尚未匯入名單</td></tr>`;
-        return;
-      }
-
-      parsedBuyers.forEach(b => {
-        let itemText = [];
-        let totalTwd = 0;
-        let totalJpy = 0;
-
-        Object.keys(b.items).forEach(k => {
-          const q = b.items[k];
-          itemText.push(q > 1 ? `${k}*${q}` : k);
-          const pInfo = products.find(p => p.name === k);
-          if (pInfo) {
-            totalTwd += pInfo.twd * q;
-            totalJpy += pInfo.jpy * q;
-          }
-        });
-
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-pink-50/50 transition";
-        tr.innerHTML = `
-          <td class="p-3 font-bold text-gray-900">${b.name}</td>
-          <td class="p-3 text-pink-700 font-medium">${itemText.join('+')}</td>
-          <td class="p-3 font-bold text-emerald-600">$${totalTwd}</td>
-          <td class="p-3 text-gray-500">¥${totalJpy}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function calculateFinalResults() {
-      const group = systemGroups[currentGroupIndex];
-      const parsedBuyers = group.parsedBuyers || [];
-      const products = getProductsFromDOM();
-
-      const stockMap = {};
-      products.forEach(p => stockMap[p.name] = p.bought);
-
-      const tbody = document.getElementById('finalBody');
-      tbody.innerHTML = '';
-      const calculatedResults = [];
-
-      parsedBuyers.forEach(b => {
-        let gotItems = [];
-        let requestedCount = 0;
-        let gotCount = 0;
-
-        Object.keys(b.items).forEach(k => {
-          const qty = b.items[k];
-          requestedCount += qty;
-          const stock = stockMap[k] !== undefined ? stockMap[k] : 0;
-
-          if (stock >= qty) {
-            stockMap[k] -= qty;
-            gotCount += qty;
-            gotItems.push(qty > 1 ? `${k}*${qty}` : k);
-          } else if (stock > 0) {
-            gotCount += stock;
-            gotItems.push(`${k}*${stock}(部分)`);
-            stockMap[k] = 0;
-          }
-        });
-
-        let statusText = '未買到';
-        let badgeHtml = `<span class="bg-red-100 text-red-700 font-bold px-2 py-1 rounded text-xs">未買到</span>`;
-        if (gotCount === requestedCount && requestedCount > 0) {
-          statusText = '有買到';
-          badgeHtml = `<span class="bg-emerald-100 text-emerald-700 font-bold px-2 py-1 rounded text-xs">有買到</span>`;
-        } else if (gotCount > 0) {
-          statusText = '部分買到';
-          badgeHtml = `<span class="bg-amber-100 text-amber-700 font-bold px-2 py-1 rounded text-xs">部分買到</span>`;
-        }
-
-        calculatedResults.push({
-          name: b.name,
-          gotItemsStr: gotItems.join('+') || '無',
-          gotCount,
-          statusText
-        });
-
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-pink-50/50 transition";
-        tr.innerHTML = `
-          <td class="p-3 font-bold text-gray-900">${b.name}</td>
-          <td class="p-3 text-pink-700 font-medium">${gotItems.join('+') || '無'}</td>
-          <td class="p-3 font-bold text-gray-700">${gotCount}</td>
-          <td class="p-3">${badgeHtml}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      group.calculatedResults = calculatedResults;
-      saveGroupsToStorage();
-      alert('買到名單分配計算完成！');
-    }
-
-    function clearTextAndBuyers() {
-      if (confirm('確定要清空本團的喊單內文與已整理的名單嗎？')) {
-        document.getElementById('rawLineText').value = '';
-        systemGroups[currentGroupIndex].parsedBuyers = [];
-        saveCurrentGroupData();
-        renderPreview();
-        document.getElementById('finalBody').innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">尚未計算分配結果</td></tr>`;
-        document.getElementById('warningBox').classList.add('hidden');
-      }
-    }
-
-    // Excel Export: Strict 5 Columns Format
-    function exportGroupExcel() {
-      const group = systemGroups[currentGroupIndex];
-      const parsedBuyers = group.parsedBuyers || [];
-
-      if (parsedBuyers.length === 0) {
-        alert('請先解析並匯入喊單資料！');
-        return;
-      }
-
-      const products = getProductsFromDOM();
-      const sheetData = [];
-
-      sheetData.push([]); // Row 1
-
-      // Row 2: 品名
-      const row2 = ['品名'];
-      products.forEach(p => row2.push(p.name));
-      sheetData.push(row2);
-
-      // Row 3: 日幣
-      const row3 = ['日幣'];
-      products.forEach(p => row3.push(p.jpy));
-      sheetData.push(row3);
-
-      // Row 4: 定價(未二補)
-      const row4 = ['定價(未二補)'];
-      products.forEach(p => row4.push(p.twd));
-      sheetData.push(row4);
-
-      // Row 5: 總數
-      const row5 = ['總數'];
-      products.forEach(p => {
-        let sum = 0;
-        parsedBuyers.forEach(b => sum += (b.items[p.name] || 0));
-        row5.push(sum);
-      });
-      sheetData.push(row5);
-
-      sheetData.push([]); // Row 6
-
-      // Row 7: 表頭 (Strictly 5 columns: 名字, 品項, 價格, 日幣, 備註)
-      const row7 = ['名字', '品項', '價格', '日幣', '備註'];
-      sheetData.push(row7);
-
-      // Row 8+: Buyers
-      parsedBuyers.forEach(b => {
-        let itemStrParts = [];
-        let totalTwd = 0;
-        let totalJpy = 0;
-
-        Object.keys(b.items).forEach(k => {
-          const q = b.items[k];
-          itemStrParts.push(q > 1 ? `${k}*${q}` : k);
-          const pInfo = products.find(p => p.name === k);
-          if (pInfo) {
-            totalTwd += pInfo.twd * q;
-            totalJpy += pInfo.jpy * q;
-          }
-        });
-
-        const row = [b.name, itemStrParts.join('+'), totalTwd, totalJpy, ''];
-        sheetData.push(row);
-      });
-
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(sheetData);
-      XLSX.utils.book_append_sheet(wb, ws, group.name);
-      XLSX.writeFile(wb, `${group.name}_開團登記表.xlsx`);
-    }
-
-    // Export Final Results Excel
-    function exportFinalExcel() {
-      const group = systemGroups[currentGroupIndex];
-      const results = group.calculatedResults || [];
-
-      if (results.length === 0) {
-        alert('請先點擊「3. 生成買到名單」！');
-        return;
-      }
-
-      const sheetData = [['名字', '買到品項', '數量', '分配結果']];
-      results.forEach(r => sheetData.push([r.name, r.gotItemsStr, r.gotCount, r.statusText]));
-
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(sheetData);
-      XLSX.utils.book_append_sheet(wb, ws, '買到名單');
-      XLSX.writeFile(wb, `${group.name}_最終買到名單.xlsx`);
-    }
-
-    // Stage 2 Import Excel File and Restore Group Data
-    function importExcelFile(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        const data = new Uint8Array(evt.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-
-        if (json.length < 8) {
-          alert('無效的開團登記表 Excel 格式！');
-          return;
-        }
-
-        const pNames = json[1].slice(1);
-        const pJpys = json[2].slice(1);
-        const pTwds = json[3].slice(1);
-
-        document.getElementById('productList').innerHTML = '';
-        pNames.forEach((name, idx) => {
-          if (name) addProductRow(name, pJpys[idx] || 0, pTwds[idx] || 0, '', '');
-        });
-
-        const parsedBuyers = [];
-        for (let r = 7; r < json.length; r++) {
-          const row = json[r];
-          if (row && row[0]) {
-            const name = row[0];
-            const itemStr = row[1] || '';
-            const items = {};
-
-            // Parse item string back to map
-            itemStr.split('+').forEach(part => {
-              const m = part.match(/(.+?)(?:\*(\d+))?$/);
-              if (m) {
-                const iName = m[1].trim();
-                const iQty = m[2] ? parseInt(m[2], 10) : 1;
-                items[iName] = iQty;
-              }
-            });
-
-            parsedBuyers.push({ name, items, originalIndex: r });
-          }
-        }
-
-        systemGroups[currentGroupIndex].parsedBuyers = parsedBuyers;
-        saveCurrentGroupData();
-        renderPreview();
-        alert(`成功還原 【${file.name}】 名單！共 ${parsedBuyers.length} 位買家，可直接進行二階段採購分配！`);
-      };
-      reader.readAsArrayBuffer(file);
-    }
-  </script>
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    XLSX.utils.book_append_sheet(wb, ws, '買到名單');
+    XLSX.writeFile(wb, `${groupName}_最終買到名單.xlsx`);
+  }
+</script>
 </body>
-</html> ㄋ
+</html>
