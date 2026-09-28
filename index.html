@@ -144,7 +144,7 @@
               <th>品項</th>
               <th>台幣價格</th>
               <th>日幣價格</th>
-              <th>備註 (尺寸/自吃一單/替代說明)</th>
+              <th>備註 (替代說明/自吃一單)</th>
             </tr>
           </thead>
           <tbody id="previewBody">
@@ -189,7 +189,7 @@
 
   window.onload = function() {
     if (Object.keys(groupsData).length === 0) {
-      createNewGroup('0928平行受注團', true);
+      createNewGroup('1002萬聖節團', true);
     } else {
       if (!currentGroupId || !groupsData[currentGroupId]) {
         currentGroupId = Object.keys(groupsData)[0];
@@ -210,7 +210,7 @@
       name,
       rate: 0.24,
       globalLimit: 1,
-      products: isFirstTime ? [
+      products: [
         { name: '南瓜兔兔', jpy: 2420, twd: 581, limit: '', bought: '' },
         { name: '幽靈吉伊', jpy: 1540, twd: 370, limit: '', bought: '' },
         { name: '幽靈小八', jpy: 1540, twd: 370, limit: '', bought: '' },
@@ -227,8 +227,10 @@
         { name: '兔兔束口包', jpy: 2310, twd: 555, limit: '', bought: '' },
         { name: '小八束口包', jpy: 2310, twd: 555, limit: '', bought: '' },
         { name: '幽靈環保袋', jpy: 2090, twd: 502, limit: '', bought: '' },
-        { name: '南瓜兔兔衣服', jpy: 4180, twd: 1003, limit: '', bought: '' }
-      ] : [],
+        { name: '南瓜兔兔衣服', jpy: 4180, twd: 1003, limit: '', bought: '' },
+        { name: '南瓜兔兔包', jpy: 3630, twd: 871, limit: '', bought: '' },
+        { name: '幽靈黑色托特包', jpy: 3630, twd: 871, limit: '', bought: '' }
+      ],
       rawText: '',
       buyers: []
     };
@@ -237,8 +239,6 @@
     saveAllToStorage();
     renderSidebar();
     loadGroupData(id);
-
-    if (!isFirstTime) addProductRow();
   }
 
   function deleteGroup(id, e) {
@@ -452,14 +452,25 @@
 
       if (timePattern.test(line)) continue;
 
+      // 自吃一單標記
       if (line.includes('可自吃')) {
         if (currentBuyerObj) {
-          currentBuyerObj.notes = (currentBuyerObj.notes ? currentBuyerObj.notes + '；' : '') + line;
+          const subNote = line.replace(/可自吃一單,?/g, '').trim();
+          if (subNote) currentBuyerObj.notes = (currentBuyerObj.notes ? currentBuyerObj.notes + '；' : '') + subNote;
           currentBuyerObj.canVip = true;
         }
         continue;
       }
 
+      // 特殊替換備註 (例如：若無L改M、沒有S改M)
+      if (line.includes('若無') || line.includes('改') || line.includes('沒有')) {
+        if (currentBuyerObj) {
+          currentBuyerObj.notes = (currentBuyerObj.notes ? currentBuyerObj.notes + '；' : '') + line;
+        }
+        continue;
+      }
+
+      // 取消指令
       if (line.includes('取消')) {
         if (currentBuyerObj) {
           products.forEach(p => {
@@ -486,16 +497,17 @@
           const singleLimit = p.limit !== '' ? (parseInt(p.limit, 10) || 0) : globalLimit;
           if (singleLimit > 0 && qty > singleLimit) qty = singleLimit;
 
+          // 抓取尺寸並直接接在商品名稱後面（例如：南瓜兔兔衣服 XL）
           const sizeMatch = line.match(/(?:尺寸|號)?\s*(S|M|L|XL|2XL|3XL)/i);
-          let sizeNote = sizeMatch ? `尺寸:${sizeMatch[1].toUpperCase()}` : '';
+          let finalItemName = p.name;
+          if (sizeMatch) {
+            finalItemName = `${p.name} ${sizeMatch[1].toUpperCase()}`;
+          }
 
           if (currentBuyerObj) {
-            currentBuyerObj.items[p.name] = (currentBuyerObj.items[p.name] || 0) + qty;
-            if (singleLimit > 0 && currentBuyerObj.items[p.name] > singleLimit) {
-              currentBuyerObj.items[p.name] = singleLimit;
-            }
-            if (sizeNote && !currentBuyerObj.notes.includes(sizeNote)) {
-              currentBuyerObj.notes = (currentBuyerObj.notes ? currentBuyerObj.notes + '；' : '') + sizeNote;
+            currentBuyerObj.items[finalItemName] = (currentBuyerObj.items[finalItemName] || 0) + qty;
+            if (singleLimit > 0 && currentBuyerObj.items[finalItemName] > singleLimit) {
+              currentBuyerObj.items[finalItemName] = singleLimit;
             }
           }
         }
@@ -563,7 +575,10 @@
       Object.keys(b.items).forEach(k => {
         const q = b.items[k];
         itemText.push(q > 1 ? `${k}*${q}` : k);
-        const pInfo = products.find(p => p.name === k);
+
+        // 找尋對應單價（兼顧帶尺寸的品項）
+        const baseName = k.split(' ')[0];
+        const pInfo = products.find(p => p.name === baseName || p.name === k);
         if (pInfo) {
           totalTwd += pInfo.twd * q;
           totalJpy += pInfo.jpy * q;
@@ -601,16 +616,19 @@
       Object.keys(b.items).forEach(k => {
         const qty = b.items[k];
         requestedCount += qty;
-        const stock = stockMap[k] !== undefined ? stockMap[k] : 0;
+        const baseName = k.split(' ')[0];
+        const stock = stockMap[baseName] !== undefined ? stockMap[baseName] : (stockMap[k] !== undefined ? stockMap[k] : 0);
 
         if (stock >= qty) {
-          stockMap[k] -= qty;
+          if (stockMap[baseName] !== undefined) stockMap[baseName] -= qty;
+          else stockMap[k] -= qty;
           gotCount += qty;
           gotItems.push(qty > 1 ? `${k}*${qty}` : k);
         } else if (stock > 0) {
           gotCount += stock;
           gotItems.push(`${k}*${stock}(部分)`);
-          stockMap[k] = 0;
+          if (stockMap[baseName] !== undefined) stockMap[baseName] = 0;
+          else stockMap[k] = 0;
         }
       });
 
@@ -716,7 +734,11 @@
     const row5 = ['總數'];
     products.forEach(p => {
       let sum = 0;
-      buyers.forEach(b => sum += (b.items[p.name] || 0));
+      buyers.forEach(b => {
+        Object.keys(b.items).forEach(k => {
+          if (k.startsWith(p.name)) sum += b.items[k];
+        });
+      });
       row5.push(sum);
     });
     sheetData.push(row5);
@@ -734,7 +756,9 @@
       Object.keys(b.items).forEach(k => {
         const q = b.items[k];
         itemStrParts.push(q > 1 ? `${k}*${q}` : k);
-        const pInfo = products.find(p => p.name === k);
+
+        const baseName = k.split(' ')[0];
+        const pInfo = products.find(p => p.name === baseName || p.name === k);
         if (pInfo) {
           totalTwd += pInfo.twd * q;
           totalJpy += pInfo.jpy * q;
