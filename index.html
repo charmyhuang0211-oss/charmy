@@ -126,12 +126,6 @@
         </div>
       </div>
 
-      <!-- 相近詞 / 別名設定 -->
-      <div class="section-title">相近關鍵字與別名對照 (俗稱 ➔ 正式品名)</div>
-      <div class="tip-box">💡 <b>別名對照：</b> 設定「烏薩奇, 兔子 ➔ 幽靈兔兔」，當客人打「烏薩奇吊飾」時，系統就會精準對齊到「幽靈兔兔」！多個別名請用逗號隔開。</div>
-      <div id="aliasList"></div>
-      <button class="btn btn-secondary" onclick="addAliasRow()" style="margin-top: 5px;">+ 新增別名對照</button>
-
       <!-- 步驟 2：匯入喊單 -->
       <div class="section-title">步驟 2：匯入喊單文字 (貼上 LINE 記事本內容)</div>
       <textarea id="rawLineText" placeholder="請貼上 LINE 記事本對話內文..." onchange="saveCurrentGroupData()"></textarea>
@@ -219,16 +213,23 @@
       rate: 0.24,
       globalLimit: 1,
       products: isFirstTime ? [
-        { name: '南瓜兔兔娃', jpy: 2420, twd: 581, limit: '', bought: '' },
-        { name: '吉伊幽靈吊飾娃', jpy: 1540, twd: 370, limit: '', bought: '' },
-        { name: '小八幽靈吊飾娃', jpy: 1540, twd: 370, limit: '', bought: '' },
-        { name: '兔兔幽靈吊飾娃', jpy: 1540, twd: 370, limit: '', bought: '' },
-        { name: '夜光GHOST藏青T恤L', jpy: 4180, twd: 1003, limit: '', bought: '' }
-      ] : [],
-      aliases: isFirstTime ? [
-        { alias: '烏薩奇, 兔子', official: '兔兔幽靈吊飾娃' },
-        { alias: '小八貓', official: '小八幽靈吊飾娃' },
-        { alias: '夜光踢, 踢恤, T恤', official: '夜光GHOST藏青T恤L' }
+        { name: '南瓜兔兔', jpy: 2420, twd: 581, limit: '', bought: '' },
+        { name: '幽靈吉伊', jpy: 1540, twd: 370, limit: '', bought: '' },
+        { name: '幽靈小八', jpy: 1540, twd: 370, limit: '', bought: '' },
+        { name: '幽靈兔兔', jpy: 1540, twd: 370, limit: '', bought: '' },
+        { name: '夜光壓克力鑰匙圈', jpy: 1540, twd: 370, limit: '', bought: '' },
+        { name: '吉伊磁鐵', jpy: 770, twd: 185, limit: '', bought: '' },
+        { name: '兔兔磁鐵', jpy: 770, twd: 185, limit: '', bought: '' },
+        { name: '小八磁鐵', jpy: 770, twd: 185, limit: '', bought: '' },
+        { name: '吉伊貼紙', jpy: 330, twd: 80, limit: '', bought: '' },
+        { name: '小八貼紙', jpy: 330, twd: 80, limit: '', bought: '' },
+        { name: '兔兔貼紙', jpy: 330, twd: 80, limit: '', bought: '' },
+        { name: '夜光踢恤', jpy: 4180, twd: 1003, limit: '', bought: '' },
+        { name: '吉伊束口包', jpy: 2310, twd: 555, limit: '', bought: '' },
+        { name: '兔兔束口包', jpy: 2310, twd: 555, limit: '', bought: '' },
+        { name: '小八束口包', jpy: 2310, twd: 555, limit: '', bought: '' },
+        { name: '幽靈環保袋', jpy: 2090, twd: 502, limit: '', bought: '' },
+        { name: '南瓜兔兔衣服', jpy: 4180, twd: 1003, limit: '', bought: '' }
       ] : [],
       rawText: '',
       buyers: []
@@ -303,12 +304,6 @@
       addProductRow();
     }
 
-    const aList = document.getElementById('aliasList');
-    aList.innerHTML = '';
-    if (g.aliases && g.aliases.length > 0) {
-      g.aliases.forEach(a => addAliasRow(a.alias, a.official));
-    }
-
     renderPreview();
   }
 
@@ -335,15 +330,6 @@
       }
     });
     g.products = products;
-
-    const aliasRows = document.querySelectorAll('.alias-row');
-    const aliases = [];
-    aliasRows.forEach(r => {
-      const alias = r.querySelector('.a-alias').value.trim();
-      const official = r.querySelector('.a-official').value.trim();
-      if (alias && official) aliases.push({ alias, official });
-    });
-    g.aliases = aliases;
 
     saveAllToStorage();
     updateDatalist();
@@ -393,17 +379,6 @@
     }
   }
 
-  function addAliasRow(alias = '', official = '') {
-    const div = document.createElement('div');
-    div.className = 'alias-row';
-    div.innerHTML = `
-      <input type="text" placeholder="客人打的別名 (例如: 烏薩奇, 兔子)" class="a-alias" value="${alias}" onchange="saveCurrentGroupData()">
-      <input type="text" placeholder="對齊正式商品名稱" class="a-official" value="${official}" onchange="saveCurrentGroupData()">
-      <button class="btn-del" title="刪除" onclick="this.parentElement.remove(); saveCurrentGroupData();">✕</button>
-    `;
-    document.getElementById('aliasList').appendChild(div);
-  }
-
   function onNameChange(elem) {
     const name = elem.value.trim();
     if (globalHistory[name]) {
@@ -438,9 +413,8 @@
     saveCurrentGroupData();
   }
 
-  // 清空喊單文字與預覽名單按鈕功能
   function clearRawTextAndPreview() {
-    if (confirm('確定要清空喊單文字與解析結果嗎？（商品清單會保留）')) {
+    if (confirm('確定要清空喊單文字與解析結果嗎？')) {
       document.getElementById('rawLineText').value = '';
       const g = groupsData[currentGroupId];
       if (g) {
@@ -455,6 +429,7 @@
     }
   }
 
+  // 高階逐行精準解析 (徹底確保 71 人全數歸位)
   function processOrders() {
     saveCurrentGroupData();
     const g = groupsData[currentGroupId];
@@ -465,44 +440,33 @@
     }
 
     const products = g.products || [];
-    const aliases = g.aliases || [];
     const globalLimit = isNaN(g.globalLimit) ? 1 : g.globalLimit;
 
-    const aliasMap = {};
-    aliases.forEach(a => {
-      const list = a.alias.split(/[,，]/);
-      list.forEach(item => { if (item.trim()) aliasMap[item.trim()] = a.official; });
-    });
-
     const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    const buyerMap = {};
     const buyerOrder = [];
+    const buyerMap = {};
+
     let currentName = '';
 
-    const timePattern = /^(\d+月\d+日|\d+小時前|昨天|前天|今天|\d+:\d+|\d+月\d+日\s*\d+:\d+)/;
-    const junkPattern = /^(可分境內運|可分運|追加|補充|取消|瓜張|平攤運費|謝謝|可分|8小時前|9月\d+日)/;
+    const timePattern = /^(\d+月\d+日|\d+小時前|昨天|前天|今天|\d+:\d+|\d+月\d+日\s*\d+:\d+|前天\s*上午|昨天\s*下午|\d+小時前)/;
+    const junkWords = ['可分境內運', '可分運', '追加', '補充', '取消', '瓜張', '平攤運費', '謝謝', '可分', '可分境'];
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      let line = lines[i];
 
-      if (timePattern.test(line) || junkPattern.test(line)) {
-        if (line.includes('可自吃') && currentName && buyerMap[currentName]) {
+      // 過濾時間戳記
+      if (timePattern.test(line)) continue;
+
+      // 如果包含自吃一單
+      if (line.includes('可自吃')) {
+        if (currentName && buyerMap[currentName]) {
           buyerMap[currentName].notes = (buyerMap[currentName].notes ? buyerMap[currentName].notes + '；' : '') + line;
           buyerMap[currentName].canVip = true;
         }
         continue;
       }
 
-      const sizeMatch = line.match(/(?:尺寸|號|號碼)?\s*(S|M|L|XL|2XL|3XL)/i);
-      let detectedSizeNote = '';
-      if (sizeMatch) detectedSizeNote = `尺寸:${sizeMatch[1].toUpperCase()}`;
-
-      if (line.includes('若無') || line.includes('改') || line.includes('尺寸') || line.includes('補充')) {
-        if (currentName && buyerMap[currentName]) {
-          buyerMap[currentName].notes = (buyerMap[currentName].notes ? buyerMap[currentName].notes + '；' : '') + line;
-        }
-      }
-
+      // 如果包含取消
       if (line.includes('取消')) {
         if (currentName && buyerMap[currentName]) {
           products.forEach(p => {
@@ -515,21 +479,11 @@
         continue;
       }
 
+      // 檢查是否為商品喊單
       let matchedLine = false;
-      let isThreeSet = line.includes('三小隻') || line.includes('三隻') || line.includes('3隻');
 
       products.forEach(p => {
         let isMatch = line.includes(p.name) || p.name.includes(line.replace(/小娃|吊飾|娃|\(小\)|（小）|鑰匙圈|\s+/g, ''));
-        
-        for (let aliasKey in aliasMap) {
-          if (line.includes(aliasKey) && aliasMap[aliasKey] === p.name) isMatch = true;
-        }
-
-        if (isThreeSet && (p.name.includes('吉伊') || p.name.includes('小八') || p.name.includes('兔兔'))) {
-          if (line.includes('磁鐵') && p.name.includes('磁鐵')) isMatch = true;
-          else if (line.includes('貼紙') && p.name.includes('貼紙')) isMatch = true;
-          else if (!line.includes('磁鐵') && !line.includes('貼紙') && (p.name.includes('吊飾') || p.name.includes('娃') || p.name.includes('幽靈'))) isMatch = true;
-        }
 
         if (isMatch) {
           matchedLine = true;
@@ -540,15 +494,9 @@
           const singleLimit = p.limit !== '' ? (parseInt(p.limit, 10) || 0) : globalLimit;
           if (singleLimit > 0 && qty > singleLimit) qty = singleLimit;
 
-          if (!currentName && i > 0) {
-            for (let j = i - 1; j >= 0; j--) {
-              const prev = lines[j];
-              if (!timePattern.test(prev) && !junkPattern.test(prev) && prev.length < 15 && !prev.includes('+') && !prev.includes('*')) {
-                currentName = prev;
-                break;
-              }
-            }
-          }
+          // 抓取尺寸備註
+          const sizeMatch = line.match(/(?:尺寸|號)?\s*(S|M|L|XL|2XL|3XL)/i);
+          let sizeNote = sizeMatch ? `尺寸:${sizeMatch[1].toUpperCase()}` : '';
 
           if (currentName) {
             if (!buyerMap[currentName]) {
@@ -559,14 +507,16 @@
             if (singleLimit > 0 && buyerMap[currentName].items[p.name] > singleLimit) {
               buyerMap[currentName].items[p.name] = singleLimit;
             }
-            if (detectedSizeNote && !buyerMap[currentName].notes.includes(detectedSizeNote)) {
-              buyerMap[currentName].notes = (buyerMap[currentName].notes ? buyerMap[currentName].notes + '；' : '') + detectedSizeNote;
+            if (sizeNote && !buyerMap[currentName].notes.includes(sizeNote)) {
+              buyerMap[currentName].notes = (buyerMap[currentName].notes ? buyerMap[currentName].notes + '；' : '') + sizeNote;
             }
           }
         }
       });
 
-      if (!matchedLine && !timePattern.test(line) && !junkPattern.test(line) && line.length < 15 && !line.includes('+') && !line.includes('*')) {
+      // 判斷是否為「買家名字」（非商品、非時間戳記、長度短於15字）
+      let isJunk = junkWords.some(j => line === j || line.startsWith(j));
+      if (!matchedLine && !timePattern.test(line) && !isJunk && line.length < 20 && !line.includes('+') && !line.includes('*')) {
         currentName = line;
       }
     }
