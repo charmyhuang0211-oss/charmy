@@ -188,8 +188,9 @@
   let globalHistory = JSON.parse(localStorage.getItem('qian_global_history') || '{}');
 
   window.onload = function() {
+    // 檢查是否有儲存過專案，沒有的話建立預設專案
     if (Object.keys(groupsData).length === 0) {
-      createNewGroup('1002萬聖節團', true);
+      createNewGroup('1002萬聖節團');
     } else {
       if (!currentGroupId || !groupsData[currentGroupId]) {
         currentGroupId = Object.keys(groupsData)[0];
@@ -200,38 +201,18 @@
     updateDatalist();
   };
 
-  function createNewGroup(defaultName = '', isFirstTime = false) {
+  function createNewGroup(defaultName = '') {
     const id = 'group_' + Date.now();
     const name = defaultName || prompt('請輸入新團務名稱：', '新開團務');
     if (!name) return;
 
+    // 建立新專案，完全空的清單供自己填寫
     groupsData[id] = {
       id,
       name,
       rate: 0.24,
       globalLimit: 1,
-      products: [
-        { name: '吉伊幽靈吊飾娃', jpy: 1540, twd: 370, limit: 1, bought: '' },
-        { name: '小八幽靈吊飾娃', jpy: 1540, twd: 370, limit: 1, bought: '' },
-        { name: '兔兔幽靈吊飾娃', jpy: 1540, twd: 370, limit: 1, bought: '' },
-        { name: '南瓜兔兔娃', jpy: 2420, twd: 581, limit: 1, bought: '' },
-        { name: '幽靈壓克力吊飾', jpy: 1540, twd: 370, limit: 1, bought: '' },
-        { name: '吉伊幽靈磁鐵', jpy: 770, twd: 185, limit: 1, bought: '' },
-        { name: '小八幽靈磁鐵', jpy: 770, twd: 185, limit: 1, bought: '' },
-        { name: '兔兔幽靈磁鐵', jpy: 770, twd: 185, limit: 1, bought: '' },
-        { name: '吉伊幽靈貼紙', jpy: 330, twd: 80, limit: 1, bought: '' },
-        { name: '小八幽靈貼紙', jpy: 330, twd: 80, limit: 1, bought: '' },
-        { name: '兔兔幽靈貼紙', jpy: 330, twd: 80, limit: 1, bought: '' },
-        { name: '吉伊幽靈束口包', jpy: 2310, twd: 555, limit: 1, bought: '' },
-        { name: '小八幽靈束口包', jpy: 2310, twd: 555, limit: 1, bought: '' },
-        { name: '兔兔幽靈束口包', jpy: 2310, twd: 555, limit: 1, bought: '' },
-        { name: '幽靈折疊環保袋', jpy: 2090, twd: 502, limit: 1, bought: '' },
-        { name: '南瓜兔兔T恤 S', jpy: 4180, twd: 1003, limit: 1, bought: '' },
-        { name: '南瓜兔兔T恤 M', jpy: 4180, twd: 1003, limit: 1, bought: '' },
-        { name: '南瓜兔兔T恤 L', jpy: 4180, twd: 1003, limit: 1, bought: '' },
-        { name: '南瓜兔兔T恤 XL', jpy: 4180, twd: 1003, limit: 1, bought: '' },
-        { name: '夜光GHOST藏青T恤 L', jpy: 4180, twd: 1003, limit: 1, bought: '' }
-      ],
+      products: [],
       rawText: '',
       buyers: []
     };
@@ -240,6 +221,9 @@
     saveAllToStorage();
     renderSidebar();
     loadGroupData(id);
+
+    // 新專案自動給一列空白商品欄位
+    if (!defaultName) addProductRow();
   }
 
   function deleteGroup(id, e) {
@@ -251,7 +235,7 @@
       if (remainingIds.length > 0) {
         currentGroupId = remainingIds[0];
       } else {
-        createNewGroup('新開團務', false);
+        createNewGroup('新開團務');
         return;
       }
       saveAllToStorage();
@@ -285,6 +269,7 @@
     loadGroupData(id);
   }
 
+  // 讀取專案資料：100% 讀取使用者輸入的商品與喊單
   function loadGroupData(id) {
     const g = groupsData[id];
     if (!g) return;
@@ -644,7 +629,6 @@
     alert('買到名單分配計算完成！');
   }
 
-  // 智慧搜尋 Excel 正確分頁 (完美兼容 1002萬聖節團.xlsx)
   function importExcelFile(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -654,7 +638,6 @@
       const data = new Uint8Array(evt.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
 
-      // 自動尋找真正存放名單的分頁 (尋找名稱含有「團」或「萬聖節」的分頁)
       let targetSheetName = workbook.SheetNames[0];
       for (let sName of workbook.SheetNames) {
         if (sName.includes('團') || sName.includes('萬聖節')) {
@@ -672,7 +655,6 @@
       }
 
       const pNames = json[0].slice(1);
-      const pJpys = json[0].slice(1); // 可對應欄位
       const pTwds = json[1].slice(1);
 
       document.getElementById('productList').innerHTML = '';
@@ -690,8 +672,6 @@
         if (row && row[0] && typeof row[0] === 'string' && row[0].startsWith('@')) {
           const name = row[0].replace('@', '');
           const itemSummary = row[1] || '';
-          const twdTotal = row[2] || 0;
-          const jpyTotal = row[3] || 0;
           const noteStr = row[4] || '';
 
           const items = {};
@@ -757,7 +737,7 @@
       let sum = 0;
       buyers.forEach(b => {
         Object.keys(b.items).forEach(k => {
-          if (k.startsWith(p.name)) sum += b.items[k];
+          if (k === p.name) sum += b.items[k];
         });
       });
       row5.push(sum);
