@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>芊芊代購 - 智慧團務整理系統 (一鍵清除與防漏版)</title>
+  <title>芊芊代購 - 智慧團務整理系統 (支援 Excel 匯入二階段分配)</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
     :root {
       --primary-color: #f06292;
@@ -66,15 +65,12 @@
       height: 120px;
       resize: vertical;
     }
-    .product-row, .alias-row {
+    .product-row {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr 40px;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr 40px;
       gap: 10px;
       margin-bottom: 10px;
       align-items: center;
-    }
-    .alias-row {
-      grid-template-columns: 2fr 2fr 40px;
     }
     .btn {
       background-color: var(--primary-color);
@@ -119,23 +115,6 @@
     }
     .btn-del:hover {
       background-color: #c62828;
-    }
-    .upload-area {
-      border: 2px dashed var(--primary-color);
-      border-radius: 8px;
-      padding: 15px;
-      text-align: center;
-      background: #fff5f8;
-      cursor: pointer;
-      margin-bottom: 15px;
-    }
-    .upload-area:hover {
-      background: #ffe0b2;
-    }
-    #ocrStatus {
-      font-weight: bold;
-      color: #d81b60;
-      margin-top: 5px;
     }
     .actions {
       margin-top: 15px;
@@ -183,14 +162,13 @@
       margin-bottom: 15px;
       border-radius: 4px;
     }
-    .warn-box {
-      background-color: #fff3e0;
-      border-left: 4px solid #ff9800;
-      padding: 10px 15px;
-      font-size: 0.88rem;
-      margin-top: 10px;
-      border-radius: 4px;
-      display: none;
+    .import-box {
+      background-color: #f3e5f5;
+      border: 2px dashed #ab47bc;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      text-align: center;
     }
   </style>
 </head>
@@ -199,43 +177,29 @@
 <div class="container">
   <h1>芊芊代購 - 智慧代購整理軟體</h1>
 
+  <!-- 舊檔還原備用 -->
+  <div class="import-box">
+    📂 <b>久遠採購回來？點此匯入之前的『開團登記表 Excel』直接還原名單：</b>
+    <input type="file" id="excelInput" accept=".xlsx, .xls" style="margin-top: 5px;" onchange="importExcelFile(event)">
+  </div>
+
   <!-- 步驟 1：開團設定 -->
-  <div class="section-title">步驟 1：開團基本設定與正式商品</div>
+  <div class="section-title">步驟 1：開團基本設定與商品 (可設定單品獨立限購)</div>
   <div class="grid-2">
     <div>
       <label>開團名稱 (例如：0928平行受注團)</label>
       <input type="text" id="groupName" value="0928平行受注團">
     </div>
-    <div>
-      <label>每人每款限購上限 (設 0 表示不限購)</label>
-      <input type="number" id="limitQty" value="1" min="0">
-    </div>
   </div>
 
   <div style="margin-top: 15px;">
-    <label>正式商品清單 (名稱 / 日幣 / 台幣定價 / 實際買到數［採購完再填］)</label>
+    <label>商品清單 (名稱 / 日幣 / 台幣 / 限購上限 / 實際買到數)</label>
     <div id="productList"></div>
     <button class="btn btn-secondary" onclick="addProductRow()" style="margin-top: 5px;">+ 新增正式商品</button>
   </div>
 
-  <!-- 同義詞 / 別名設定 -->
-  <div class="section-title">自訂俗稱對照 (非必填)</div>
-  <div class="tip-box">
-    💡 <b>智慧比對已開啟：</b> 只要喊單包含「平行世界小八」，無論後面接小娃、吊飾、(小) 等都會自動歸類為正式商品「平行世界小八」！
-  </div>
-  <div id="aliasList"></div>
-  <button class="btn btn-secondary" onclick="addAliasRow()" style="margin-top: 5px;">+ 新增俗稱對照</button>
-
   <!-- 步驟 2：匯入喊單 -->
   <div class="section-title">步驟 2：匯入喊單文字 (貼上 LINE 記事本內容)</div>
-  
-  <div class="upload-area" onclick="document.getElementById('imageInput').click()">
-    📸 <b>點擊上傳截圖辨識 (備用)</b>
-    <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
-    <div id="ocrStatus"></div>
-  </div>
-
-  <label>貼上 LINE 記事本內文：</label>
   <textarea id="rawLineText" placeholder="請直接貼上 LINE 記事本對話內容..."></textarea>
   
   <div class="actions">
@@ -243,8 +207,6 @@
     <button class="btn btn-secondary" onclick="sortOrders()">2. 智慧整理排序</button>
     <button class="btn btn-reset" onclick="clearAllData()">🧹 一鍵清空內容 (開新團)</button>
   </div>
-
-  <div id="warningBox" class="warn-box"></div>
 
   <!-- 整理結果預覽 -->
   <div class="section-title">階段一：登記名單與預覽 (<span id="buyerCount">0</span> 人)</div>
@@ -270,7 +232,7 @@
 
   <!-- 步驟 3：最終買到名單 -->
   <div class="section-title">階段二：採購完成後分配結果</div>
-  <button class="btn" onclick="calculateFinalResults()">3. 生成買到名單 (需先在上方填寫實際買到數)</button>
+  <button class="btn" onclick="calculateFinalResults()">3. 生成買到名單 (請先在上方填寫實際買到數)</button>
   <div style="overflow-x: auto;">
     <table>
       <thead>
@@ -294,39 +256,29 @@
 
 <script>
   let defaultProducts = [
-    { name: '平行世界小八', jpy: 1650, twd: 400, bought: '' },
-    { name: '平行世界吉伊', jpy: 1650, twd: 400, bought: '' }
+    { name: '平行世界小八', jpy: 1650, twd: 400, limit: 1, bought: '' },
+    { name: '平行世界吉伊', jpy: 1650, twd: 400, limit: 1, bought: '' }
   ];
 
   let parsedBuyers = [];
   let calculatedResults = [];
 
   window.onload = function() {
-    defaultProducts.forEach(p => addProductRow(p.name, p.jpy, p.twd, p.bought));
+    defaultProducts.forEach(p => addProductRow(p.name, p.jpy, p.twd, p.limit, p.bought));
   };
 
-  function addProductRow(name = '', jpy = '', twd = '', bought = '') {
+  function addProductRow(name = '', jpy = '', twd = '', limit = '', bought = '') {
     const div = document.createElement('div');
     div.className = 'product-row';
     div.innerHTML = `
       <input type="text" placeholder="正式商品名稱" class="p-name" value="${name}">
       <input type="number" placeholder="日幣" class="p-jpy" value="${jpy}">
       <input type="number" placeholder="台幣定價" class="p-twd" value="${twd}">
+      <input type="number" placeholder="限購上限(無填0)" class="p-limit" value="${limit}">
       <input type="number" placeholder="實際買到數" class="p-bought" value="${bought}">
       <button class="btn-del" onclick="this.parentElement.remove()">✕</button>
     `;
     document.getElementById('productList').appendChild(div);
-  }
-
-  function addAliasRow(aliases = '', official = '') {
-    const div = document.createElement('div');
-    div.className = 'alias-row';
-    div.innerHTML = `
-      <input type="text" placeholder="客人寫的俗稱 (例如: 小八娃)" class="a-alias" value="${aliases}">
-      <input type="text" placeholder="自動轉為正式品名" class="a-official" value="${official}">
-      <button class="btn-del" onclick="this.parentElement.remove()">✕</button>
-    `;
-    document.getElementById('aliasList').appendChild(div);
   }
 
   function getProducts() {
@@ -336,50 +288,17 @@
       const name = r.querySelector('.p-name').value.trim();
       const jpy = parseFloat(r.querySelector('.p-jpy').value) || 0;
       const twd = parseFloat(r.querySelector('.p-twd').value) || 0;
+      const limit = parseInt(r.querySelector('.p-limit').value, 10) || 0;
       const boughtVal = r.querySelector('.p-bought').value;
       const bought = boughtVal === '' ? 9999 : parseInt(boughtVal, 10);
       if (name) {
-        products.push({ name, jpy, twd, bought: isNaN(bought) ? 9999 : bought });
+        products.push({ name, jpy, twd, limit, bought: isNaN(bought) ? 9999 : bought });
       }
     });
     return products;
   }
 
-  function getAliasMap() {
-    const rows = document.querySelectorAll('.alias-row');
-    const aliasMap = {};
-    rows.forEach(r => {
-      const aliasesStr = r.querySelector('.a-alias').value.trim();
-      const official = r.querySelector('.a-official').value.trim();
-      if (aliasesStr && official) {
-        const list = aliasesStr.split(/[,，]/);
-        list.forEach(a => {
-          if (a.trim()) aliasMap[a.trim()] = official;
-        });
-      }
-    });
-    return aliasMap;
-  }
-
-  function matchOfficialItem(rawText, products, aliasMap) {
-    let text = rawText.trim();
-    if (!text) return null;
-
-    if (aliasMap[text]) return aliasMap[text];
-    for (let alias in aliasMap) {
-      if (text.includes(alias)) return aliasMap[alias];
-    }
-
-    const sortedProducts = [...products].sort((a, b) => b.name.length - a.name.length);
-    for (let p of sortedProducts) {
-      if (text.includes(p.name) || p.name.includes(text.replace(/小娃|吊飾|娃|\(小\)|（小）|\s+/g, ''))) {
-        return p.name;
-      }
-    }
-    return text;
-  }
-
-  // 1. 解析喊單
+  // 1. 解析喊單 (包含多品項連寫與獨立限購)
   function processOrders() {
     const rawText = document.getElementById('rawLineText').value;
     if (!rawText.trim()) {
@@ -387,8 +306,6 @@
       return;
     }
 
-    const limitQty = parseInt(document.getElementById('limitQty').value, 10) || 0;
-    const aliasMap = getAliasMap();
     const products = getProducts();
     const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     
@@ -396,42 +313,41 @@
     const buyerOrder = [];
     let currentName = '';
     const timePattern = /(\d+月\d+日|昨天|前天|今天)?\s*(上午|下午)?\s*\d+:\d+/;
-    const unparsedLines = [];
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       if (timePattern.test(line)) continue;
 
-      const itemMatches = [...line.matchAll(/(.+?)(?:\+|\*|x|X|\s+)(\d+)/g)];
+      let matchedLine = false;
 
-      if (itemMatches.length > 0) {
-        if (!currentName && i > 0) currentName = lines[i - 1];
+      // 自動比對品項
+      products.forEach(p => {
+        // 匹配商品名稱及數量 (+1, *1, 1 或僅出現商品名)
+        if (line.includes(p.name) || p.name.includes(line.replace(/小娃|吊飾|娃|\(小\)|（小）|\s+/g, ''))) {
+          matchedLine = true;
+          let qty = 1;
+          const qtyMatch = line.match(/(?:\+|\*|x|X|\s*)(\d+)/);
+          if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
 
-        if (currentName) {
-          if (!buyerMap[currentName]) {
-            buyerMap[currentName] = { items: {} };
-            buyerOrder.push(currentName);
-          }
+          if (p.limit > 0 && qty > p.limit) qty = p.limit;
 
-          itemMatches.forEach(m => {
-            let rawItem = m[1].replace(/^(.*?)\*1\s*/, '').trim();
-            let qty = parseInt(m[2], 10);
-            let officialItem = matchOfficialItem(rawItem, products, aliasMap);
+          if (!currentName && i > 0) currentName = lines[i - 1];
 
-            if (limitQty > 0 && qty > limitQty) qty = limitQty;
-
-            buyerMap[currentName].items[officialItem] = (buyerMap[currentName].items[officialItem] || 0) + qty;
-            if (limitQty > 0 && buyerMap[currentName].items[officialItem] > limitQty) {
-              buyerMap[currentName].items[officialItem] = limitQty;
+          if (currentName) {
+            if (!buyerMap[currentName]) {
+              buyerMap[currentName] = { items: {} };
+              buyerOrder.push(currentName);
             }
-          });
+            buyerMap[currentName].items[p.name] = (buyerMap[currentName].items[p.name] || 0) + qty;
+            if (p.limit > 0 && buyerMap[currentName].items[p.name] > p.limit) {
+              buyerMap[currentName].items[p.name] = p.limit;
+            }
+          }
         }
-      } else {
-        if (!timePattern.test(line) && line.length < 20) {
-          currentName = line;
-        } else {
-          unparsedLines.push(line);
-        }
+      });
+
+      if (!matchedLine && !timePattern.test(line) && line.length < 20) {
+        currentName = line;
       }
     }
 
@@ -442,16 +358,7 @@
     }));
 
     renderPreview();
-
-    const warnBox = document.getElementById('warningBox');
-    if (unparsedLines.length > 0) {
-      warnBox.style.display = 'block';
-      warnBox.innerHTML = `⚠️ <b>注意事項：</b> 有 ${unparsedLines.length} 行文字未辨識為喊單（可能是聊天或未帶+1）：<br>` + unparsedLines.join('<br>');
-    } else {
-      warnBox.style.display = 'none';
-    }
-
-    alert(`解析成功！共抓取 ${parsedBuyers.length} 位買家名單，已完成金額精算！`);
+    alert(`解析成功！共抓取 ${parsedBuyers.length} 位買家名單（已辨識包含 rei 等連寫格式）！`);
   }
 
   // 2. 智慧整理排序
@@ -484,7 +391,6 @@
     const products = getProducts();
     const header = document.getElementById('previewHeader');
     header.innerHTML = `<th>名字</th><th>品項</th><th>台幣價格</th><th>日幣價格</th>`;
-    products.forEach(p => header.innerHTML += `<th>${p.name}</th>`);
 
     const tbody = document.getElementById('previewBody');
     tbody.innerHTML = '';
@@ -506,10 +412,6 @@
       });
 
       let trHtml = `<td><b>${b.name}</b></td><td>${itemText.join('+')}</td><td><b>$${totalTwd}</b></td><td>¥${totalJpy}</td>`;
-      products.forEach(p => {
-        trHtml += `<td>${b.items[p.name] || ''}</td>`;
-      });
-
       const tr = document.createElement('tr');
       tr.innerHTML = trHtml;
       tbody.appendChild(tr);
@@ -572,17 +474,64 @@
     alert('買到名單分配計算完成！');
   }
 
+  // 匯入 Excel 檔案還原名單
+  function importExcelFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+      if (json.length < 8) {
+        alert('無效的開團登記表 Excel 格式！');
+        return;
+      }
+
+      // 解析商品 (Row 2, 3, 4)
+      const pNames = json[1].slice(1);
+      const pJpys = json[2].slice(1);
+      const pTwds = json[3].slice(1);
+
+      document.getElementById('productList').innerHTML = '';
+      pNames.forEach((name, idx) => {
+        if (name) addProductRow(name, pJpys[idx] || 0, pTwds[idx] || 0, 0, '');
+      });
+
+      // 解析買家名單 (Row 8+)
+      parsedBuyers = [];
+      for (let r = 7; r < json.length; r++) {
+        const row = json[r];
+        if (row && row[0]) {
+          const name = row[0];
+          const items = {};
+          pNames.forEach((pName, pIdx) => {
+            const qty = parseInt(row[5 + pIdx], 10) || 0;
+            if (qty > 0 && pName) items[pName] = qty;
+          });
+          parsedBuyers.push({ name, items, originalIndex: r });
+        }
+      }
+
+      renderPreview();
+      alert(`成功還原 【${file.name}】 名單！共 ${parsedBuyers.length} 位買家，請直接在上方填寫採購數量進行分配！`);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
   // 一鍵清除內容
   function clearAllData() {
-    if (confirm('確定要清空喊單文字與已整理的名單嗎？（不會清除設定好的商品與別名）')) {
+    if (confirm('確定要清空所有內容嗎？')) {
       document.getElementById('rawLineText').value = '';
       parsedBuyers = [];
       calculatedResults = [];
       document.getElementById('previewBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">尚未匯入名單</td></tr>`;
       document.getElementById('finalBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">尚未計算分配結果</td></tr>`;
       document.getElementById('buyerCount').innerText = '0';
-      document.getElementById('warningBox').style.display = 'none';
-      alert('已清空所有文字與名單內容！可以開始整理新的一團了。');
+      alert('已清空所有內容！');
     }
   }
 
@@ -627,6 +576,7 @@
 
     // Row 7: 表頭
     const row7 = ['名字', '品項', '價格', '日幣', '備註'];
+    products.forEach(p => row7.push(p.name));
     sheetData.push(row7);
 
     // Row 8+: 買家資料
